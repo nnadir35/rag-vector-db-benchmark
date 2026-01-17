@@ -184,3 +184,60 @@ class GenerationResult:
     response: str
     retrieved_chunks: Sequence[RetrievedChunk]
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class RAGResponse:
+    """Represents the complete end-to-end RAG pipeline response.
+    
+    This type encapsulates the full result of a RAG pipeline execution,
+    combining the query, retrieved context, and generated response.
+    It serves as the primary output type for RAG pipelines and the
+    input type for end-to-end evaluation.
+    
+    This separation from GenerationResult allows for clear distinction
+    between component-level results (GenerationResult) and pipeline-level
+    results (RAGResponse), enabling independent evaluation of components
+    versus the full system.
+    
+    Attributes:
+        query: The original query that initiated the RAG pipeline
+        retrieved_chunks: The chunks retrieved by the retriever component
+        response: The final generated response from the generator component
+        metadata: Pipeline-level metadata (total latency, component versions, etc.)
+    """
+    
+    query: Query
+    retrieved_chunks: Sequence[RetrievedChunk]
+    response: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class EvaluationResult:
+    """Generic container for evaluation results without prescribed metrics.
+    
+    This type represents the output of an evaluation operation without
+    embedding specific metric definitions. Metrics are computed separately
+    by evaluators and stored externally, allowing for flexible metric
+    composition and comparison across different evaluation strategies.
+    
+    The generic design enables future-proofing: new metrics can be added
+    without modifying this core type, and different evaluators can produce
+    different metric sets while using the same result container.
+    
+    This separation ensures that the core data model remains stable while
+    evaluation logic evolves independently, supporting the framework's
+    principle of separating evaluation concerns from pipeline logic.
+    
+    Attributes:
+        subject_id: Identifier for what was evaluated (e.g., query ID, experiment ID)
+        subject_type: Type of subject (e.g., 'retrieval', 'generation', 'rag_response')
+        data: Generic evaluation data (ground truth, predictions, intermediate results)
+        metadata: Additional metadata about the evaluation (evaluator name, timestamp, etc.)
+    """
+    
+    subject_id: str
+    subject_type: str
+    data: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
