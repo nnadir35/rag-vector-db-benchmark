@@ -1,0 +1,63 @@
+# experiments/configs/baseline_pinecone_openai.yaml
+#
+# İlk deney: Pinecone + sentence-transformers + OpenAI GPT-4o-mini
+# Komut: python scripts/run_experiment.py --config experiments/configs/baseline_pinecone_openai.yaml
+
+experiment:
+  name: "baseline_pinecone_openai"
+  description: "Pinecone vector DB ile baseline RAG pipeline değerlendirmesi"
+  tags: ["baseline", "pinecone", "openai"]
+
+retriever:
+  type: "pinecone"
+  config:
+    index_name: "rag-benchmark-baseline"
+    dimension: 384
+    metric: "cosine"
+    namespace: "squad-v2-validation"
+    # api_key: env:PINECONE_API_KEY (otomatik okunur)
+
+embedder:
+  type: "sentence_transformers"
+  config:
+    model_name: "all-MiniLM-L6-v2"
+    device: "cpu"
+    batch_size: 32
+    normalize_embeddings: true
+
+generator:
+  type: "openai"
+  config:
+    model_name: "gpt-4o-mini"
+    temperature: 0.0
+    max_tokens: 256
+    # api_key: env:OPENAI_API_KEY (otomatik okunur)
+    system_prompt: >
+      You are a helpful assistant. Answer the question based only on the
+      provided context. If the answer cannot be found in the context,
+      respond with "I don't know." Keep answers concise.
+
+dataset:
+  type: "squad_v2"
+  config:
+    split: "validation"
+    max_samples: 100  # Hızlı test için — production'da null yap
+
+chunker:
+  type: "fixed_size"
+  config:
+    chunk_size: 512
+    overlap: 50
+
+pipeline:
+  top_k: 5
+  evaluate_retrieval: true
+  evaluate_generation: false  # Pahalı — isteğe bağlı aç
+
+evaluation:
+  k_values: [1, 3, 5, 10]
+  metrics:
+    - "precision@k"
+    - "recall@k"
+    - "mrr"
+    - "ndcg@k"

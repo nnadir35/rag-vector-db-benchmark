@@ -1,0 +1,58 @@
+# experiments/configs/ablation_chunk_size_256.yaml
+#
+# Ablation study: chunk_size'ın retrieval kalitesine etkisi
+# Bu config'i 256, 512 (baseline), 1024 için çalıştır ve karşılaştır.
+# Tezde "Chunking Strategy Analysis" bölümü için.
+
+experiment:
+  name: "ablation_chunk_size_256"
+  description: "chunk_size=256 ile retrieval kalitesi — baseline 512 ile karşılaştır"
+  tags: ["ablation", "chunking", "chunk_size_256"]
+
+retriever:
+  type: "chroma"  # Local — API key gerekmez, ucuz çalıştırılır
+  config:
+    collection_name: "ablation-chunk-256"
+    persist_directory: "./data/chroma_ablation_256"
+    distance_metric: "cosine"
+    dimension: 384
+
+embedder:
+  type: "sentence_transformers"
+  config:
+    model_name: "all-MiniLM-L6-v2"
+    device: "cpu"
+    batch_size: 32
+    normalize_embeddings: true
+
+generator:
+  type: "openai"
+  config:
+    model_name: "gpt-4o-mini"
+    temperature: 0.0
+    max_tokens: 256
+
+dataset:
+  type: "squad_v2"
+  config:
+    split: "validation"
+    max_samples: 100
+
+chunker:
+  type: "fixed_size"
+  config:
+    chunk_size: 256   # ← FARK BURASI
+    overlap: 25       # overlap da orantılı küçültüldü
+
+pipeline:
+  top_k: 5
+  evaluate_retrieval: true
+  evaluate_generation: false
+
+evaluation:
+  k_values: [1, 3, 5, 10]
+  metrics:
+    - "precision@k"
+    - "recall@k"
+    - "mrr"
+    - "ndcg@k"

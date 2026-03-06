@@ -1,0 +1,65 @@
+# experiments/configs/baseline_chroma_openai.yaml
+#
+# Karşılaştırma deneyi: Chroma (local, ücretsiz) + aynı embedder + aynı generator
+# Komut: python scripts/run_experiment.py --config experiments/configs/baseline_chroma_openai.yaml
+#
+# NOT: Bu config'i baseline_pinecone_openai.yaml ile çalıştırıp karşılaştır.
+# Tek fark: retriever = chroma. Böylece vektör DB'nin etkisini izole ediyoruz.
+
+experiment:
+  name: "baseline_chroma_openai"
+  description: "Chroma (local) vector DB ile baseline RAG pipeline değerlendirmesi"
+  tags: ["baseline", "chroma", "openai", "local"]
+
+retriever:
+  type: "chroma"
+  config:
+    collection_name: "rag-benchmark-baseline"
+    persist_directory: "./data/chroma_db"  # null yapılırsa in-memory
+    distance_metric: "cosine"
+    dimension: 384
+
+# Aşağısı pinecone config ile AYNI — kasıtlı, fair comparison için
+embedder:
+  type: "sentence_transformers"
+  config:
+    model_name: "all-MiniLM-L6-v2"
+    device: "cpu"
+    batch_size: 32
+    normalize_embeddings: true
+
+generator:
+  type: "openai"
+  config:
+    model_name: "gpt-4o-mini"
+    temperature: 0.0
+    max_tokens: 256
+    system_prompt: >
+      You are a helpful assistant. Answer the question based only on the
+      provided context. If the answer cannot be found in the context,
+      respond with "I don't know." Keep answers concise.
+
+dataset:
+  type: "squad_v2"
+  config:
+    split: "validation"
+    max_samples: 100
+
+chunker:
+  type: "fixed_size"
+  config:
+    chunk_size: 512
+    overlap: 50
+
+pipeline:
+  top_k: 5
+  evaluate_retrieval: true
+  evaluate_generation: false
+
+evaluation:
+  k_values: [1, 3, 5, 10]
+  metrics:
+    - "precision@k"
+    - "recall@k"
+    - "mrr"
+    - "ndcg@k"

@@ -1,0 +1,36 @@
+# Role: Senior AI Backend Engineer (RAG Expert)
+# Context: Master's Thesis Research Framework for RAG Benchmarking
+
+## Core Architecture Principles
+- **Strict Separation of Concerns:** - `src/retrievers/`, `src/generators/`, and `src/evaluators/` MUST NOT import from each other.
+    - Only `src/pipeline/` is allowed to orchestrate and import from these directories.
+    - Evaluation logic is strictly forbidden inside pipeline or component logic.
+- **Interface-First Design:** - Every new component type must inherit from an Abstract Base Class (ABC) in `src/core/`.
+- **Global State:** Strictly prohibited. Use dependency injection.
+
+## Code Standards
+- **Typing:** Strict type hints for all parameters and return types is MANDATORY.
+- **Data Models:** Use `@dataclass(frozen=True)` for all configurations and type definitions.
+- **Documentation:** Every public method must include a docstring explaining the "Rationale" (the 'why', not just the 'what').
+- **Composition:** Favor composition over inheritance.
+
+## Configuration & Hardcoding Rules
+- **Zero Hardcoding:** - Models, prompts, vector DB credentials, and hyperparameters (top-k, chunk_size) must come from `config` objects or environment variables.
+- **Prompt Management:** Templates must be stored in external files or config classes, never inlined in logic.
+
+## Component Implementation Workflow (Strict Order)
+1. Define/Update Abstract Interface in `src/core/`.
+2. Create Config Dataclass in `src/[component_type]/config.py`.
+3. Implement logic in `src/[component_type]/[implementation].py`.
+4. Register implementation in `src/[component_type]/registry.py`.
+5. Write unit tests in `tests/[component_type]/` using mocks.
+
+## Testing Strategy
+- **Isolation:** Mock all LLM and Vector DB calls. 
+- **Fixtures:** Utilize `MockEmbedder` and existing fixtures from `tests/conftest.py`.
+- **Determinism:** All tests must be deterministic (use seeds for random processes).
+
+## Import Order (isort compliant)
+1. Standard Library
+2. Third-party Libraries
+3. Internal Modules (using `src.`)

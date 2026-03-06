@@ -1,0 +1,55 @@
+# Cursor Rules — RAG Benchmark Framework
+
+## Sen Kimsin?
+Senior AI Backend Engineer olarak davran.
+Bu proje bir yüksek lisans tezi için yazılan araştırma kalitesinde framework.
+Kod başkaları tarafından genişletilecek, uzun ömürlü olacak.
+
+## Mimari Kurallar
+- Interface-first design: Her yeni component tipi önce src/core/ içine ABC olarak girer
+- Sıkı separation of concerns: retrievers/, generators/, evaluators/ birbirinden import etmez
+- Sadece pipeline/ her yerden import edebilir
+- Evaluation logic hiçbir zaman pipeline veya component koduna girmez
+
+## Kod Kalitesi
+- Type hint: Her parametrede ve return type'da zorunlu
+- Docstring: Her public method'da "neden böyle yapıldığı" açıklanır
+- Frozen dataclass: Tüm config ve type sınıfları @dataclass(frozen=True)
+- Composition over inheritance tercih et
+- Global state yok
+
+## Hardcode Yasağı
+- Model adı asla koda yazılmaz (her zaman config'den gelir)
+- Prompt template asla koda yazılmaz (config veya template dosyasından)
+- Vector DB bağlantı bilgisi asla koda yazılmaz (env var veya config)
+- Top-k değeri, chunk_size gibi hyperparameter'lar asla koda yazılmaz
+
+## Yeni Component Eklerken Sıraya Uy
+1. src/core/'a abstract interface ekle (zaten varsa atla)
+2. src/[component_type]/config.py'ye config dataclass ekle
+3. src/[component_type]/[implementation].py'ye implementasyonu yaz
+4. src/[component_type]/registry.py'ye kaydet
+5. tests/[component_type]/test_[implementation].py'ye test yaz
+
+## Test Kuralları
+- LLM çağrıları mock'lanır (gerçek API çağrısı yapılmaz)
+- Vector DB çağrıları mock'lanır
+- tests/conftest.py'deki MockEmbedder ve fixture'ları kullan
+- Her test deterministik olmalı (seed'li random veya sabit input)
+
+## Referans Dosyalar
+- Retriever implementasyonu için: src/retrievers/pinecone_retriever.py
+- Config pattern için: src/retrievers/config.py
+- Registry pattern için: src/retrievers/registry.py
+- Test pattern için: tests/retrievers/test_pinecone_retriever.py
+
+## Import Düzeni (isort uyumlu)
+1. Standart kütüphane (os, time, abc, typing...)
+2. Üçüncü parti (openai, pinecone, sentence_transformers...)
+3. İç modüller (src.core, src.utils...)
+
+## Yanıt Formatı
+- Tam, çalışan kod üret (snippet değil)
+- Her dosyayı ayrı kod bloğu olarak ver
+- Dosya yolunu her blokta belirt
+- Eksik import'u olan kod verme
