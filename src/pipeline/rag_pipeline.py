@@ -29,6 +29,7 @@ class RAGPipeline:
         generator: Generator,
         config: RAGPipelineConfig,
         retrieval_evaluator: Optional[Evaluator] = None,
+        generation_evaluator: Optional[Evaluator] = None,
     ) -> None:
         """Initialize the pipeline.
         
@@ -42,6 +43,7 @@ class RAGPipeline:
         self._generator = generator
         self._config = config
         self._retrieval_evaluator = retrieval_evaluator
+        self._generation_evaluator = generation_evaluator
 
     async def run(
         self,
@@ -101,6 +103,16 @@ class RAGPipeline:
                 "generation_metadata": generation_result.metadata,
             }
         )
+        
+        # 4. Evaluate Generation
+        if getattr(self._config, "evaluate_generation", False) and getattr(self, "_generation_evaluator", None):
+            gen_metrics = await asyncio.to_thread(
+                self._generation_evaluator.evaluate,
+                rag_response
+            )
+            if metrics is None:
+                metrics = {}
+            metrics.update(gen_metrics)
         
         total_time = time.time() - start_time
         

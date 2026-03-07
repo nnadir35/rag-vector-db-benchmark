@@ -24,6 +24,7 @@ from src.utils.config_loader import build_component_configs, load_yaml
 from src.datasets.squad_loader import SQuADLoader
 from src.generators.universal_generator import UniversalGenerator
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
+from src.evaluators.generation_evaluator import GenerationEvaluator
 from src.pipeline.rag_pipeline import RAGPipeline
 from src.core.retrieval import Retriever
 from src.core.types import Query, RetrievalResult, RetrievedChunk, Chunk, ChunkMetadata, Embedding
@@ -100,6 +101,7 @@ async def main_async(args: argparse.Namespace) -> None:
     logging.info("Initializing Generator and Evaluator...")
     generator = UniversalGenerator(exp_config.generator)
     evaluator = RetrievalEvaluator(exp_config.evaluator)
+    generation_evaluator = GenerationEvaluator(judge_generator=generator)
     
     logging.info("Initializing Embedder and computing embeddings...")
     embedder = SentenceTransformersEmbedder(exp_config.embedder)
@@ -118,7 +120,8 @@ async def main_async(args: argparse.Namespace) -> None:
         retriever=retriever,
         generator=generator,
         config=exp_config.pipeline,
-        retrieval_evaluator=evaluator
+        retrieval_evaluator=evaluator,
+        generation_evaluator=generation_evaluator
     )
     
     # 4. Run Experiment

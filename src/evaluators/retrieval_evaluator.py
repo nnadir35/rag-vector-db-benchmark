@@ -42,8 +42,14 @@ class RetrievalEvaluator(Evaluator):
         Returns:
             A dictionary of metric names and their calculated float values.
         """
-        # Safely extract IDs in rank order
-        retrieved_ids = [rc.chunk.id for rc in result.chunks]
+        # Safely extract and clean IDs to match parent documents (e.g. remove '_chunk_X')
+        raw_retrieved_ids = [
+            rc.chunk.id.split('_chunk_')[0] if '_chunk_' in rc.chunk.id else rc.chunk.id
+            for rc in result.chunks
+        ]
+        
+        # Deduplicate while preserving order
+        retrieved_ids = list(dict.fromkeys(raw_retrieved_ids))
         relevant_list = list(ground_truth_ids)
         
         metrics: Dict[str, float] = {}
