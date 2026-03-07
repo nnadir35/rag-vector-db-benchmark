@@ -4,7 +4,8 @@ This module contains concrete retriever implementations that integrate
 with various vector databases and retrieval systems.
 """
 
-from .config import PineconeRetrieverConfig
+from .chroma_retriever import ChromaRetriever
+from .config import ChromaRetrieverConfig, PineconeRetrieverConfig
 from .pinecone_retriever import PineconeRetriever
 from .registry import (
     RETRIEVER_REGISTRY,
@@ -14,14 +15,17 @@ from .registry import (
     unregister_retriever,
 )
 
-# Register PineconeRetriever
+# Register Retrievers
 register_retriever("pinecone", PineconeRetriever)
+register_retriever("chroma", ChromaRetriever)
 
 __all__ = [
     # Retriever implementations
     "PineconeRetriever",
+    "ChromaRetriever",
     # Configuration
     "PineconeRetrieverConfig",
+    "ChromaRetrieverConfig",
     # Registry
     "RETRIEVER_REGISTRY",
     "register_retriever",

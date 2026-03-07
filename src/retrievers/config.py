@@ -65,3 +65,28 @@ class PineconeRetrieverConfig:
                 )
             # Use object.__setattr__ because dataclass is frozen
             object.__setattr__(self, "api_key", api_key)
+
+
+@dataclass(frozen=True)
+class ChromaRetrieverConfig:
+    """Configuration for ChromaRetriever.
+    
+    Attributes:
+        collection_name: Name of the ChromaDB collection to use.
+        persist_directory: Optional directory path to persist database. If None,
+            runs completely in-memory.
+        distance_metric: Default is 'cosine' for most modern embeddings.
+    """
+    
+    collection_name: str = field(default="squad_benchmark")
+    persist_directory: Optional[str] = field(default=None)
+    distance_metric: str = field(default="cosine")
+    
+    def __post_init__(self) -> None:
+        """Validate configuration parameters."""
+        valid_metrics = {"cosine", "l2", "ip"}
+        if self.distance_metric not in valid_metrics:
+            raise ValueError(f"distance_metric must be one of {valid_metrics}, got '{self.distance_metric}'")
+        
+        if not self.collection_name:
+            raise ValueError("collection_name cannot be empty")
