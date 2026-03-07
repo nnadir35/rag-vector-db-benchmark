@@ -10,10 +10,10 @@
 ## 📍 ŞU ANKİ DURUM
 
 ```
-SON GÜNCELLEME : [tarih ekle]
-AKTİF GÖREV    : 1. FixedSizeChunker
-SONRAKI GÖREV  : 2. SentenceTransformersEmbedder
-TAMAMLANAN     : 0/10
+SON GÜNCELLEME : 07.03.2026
+AKTİF GÖREV    : 3. SQuAD Dataset Loader
+SONRAKİ GÖREV  : 4. OpenAIGenerator
+TAMAMLANAN     : 2/10
 ```
 
 ---
