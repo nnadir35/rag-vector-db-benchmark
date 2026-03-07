@@ -11,9 +11,9 @@
 
 ```
 SON GÜNCELLEME : 07.03.2026
-AKTİF GÖREV    : 3. SQuAD Dataset Loader
-SONRAKİ GÖREV  : 4. OpenAIGenerator
-TAMAMLANAN     : 2/10
+AKTİF GÖREV    : 6. RAGPipeline
+SONRAKİ GÖREV  : 7. config_loader.py
+TAMAMLANAN     : 5/10
 ```
 
 ---
@@ -26,7 +26,11 @@ TAMAMLANAN     : 2/10
 - [x] FixedSizeChunker — 2024-01-15 ✅
 -->
 
-Henüz tamamlanan yok.
+- [x] 1. FixedSizeChunker — 07.03.2026 ✅
+- [x] 2. SentenceTransformersEmbedder — 07.03.2026 ✅
+- [x] 3. SQuAD Dataset Loader — 07.03.2026 ✅
+- [x] 4. UniversalGenerator — 07.03.2026 ✅
+- [x] 5. RetrievalEvaluator — 07.03.2026 ✅
 
 ---
 
@@ -34,12 +38,12 @@ Henüz tamamlanan yok.
 
 Sırayı bozma. Her biri bir öncekine bağlı.
 
-- [x] **1. FixedSizeChunker** ← ŞU AN BUNU YAP
+- [x] **1. FixedSizeChunker**
 - [x] **2. SentenceTransformersEmbedder**
-- [ ] **3. SQuAD Dataset Loader**
-- [ ] **4. OpenAIGenerator**
-- [ ] **5. RetrievalEvaluator + metrics.py**
-- [ ] **6. RAGPipeline**
+- [x] **3. SQuAD Dataset Loader**
+- [x] **4. UniversalGenerator**
+- [x] **5. RetrievalEvaluator + metrics.py**
+- [x] **6. RAGPipeline** ← ŞU AN BUNU YAP
 - [ ] **7. config_loader.py**
 - [ ] **8. run_experiment.py**
 - [ ] **9. ChromaRetriever**
