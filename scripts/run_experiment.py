@@ -14,7 +14,11 @@ import logging
 import os
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
+import sys
+
+# Add project root to PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.utils.config_loader import build_component_configs, load_yaml
 from src.datasets.squad_loader import SQuADLoader
@@ -22,37 +26,17 @@ from src.generators.universal_generator import UniversalGenerator
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.pipeline.rag_pipeline import RAGPipeline
 from src.core.retrieval import Retriever
-from src.core.types import Query, RetrievalResult, RetrievedChunk, Chunk, ChunkMetadata
+from src.core.types import Query, RetrievalResult, RetrievedChunk, Chunk, ChunkMetadata, Embedding
+from src.chunkers.fixed_size_chunker import FixedSizeChunker
+from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
+from src.retrievers.chroma_retriever import ChromaRetriever
+from src.retrievers.config import ChromaRetrieverConfig
 
 # Configure simple logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-class InMemRetriever(Retriever):
-    """Temporary stand-in mock/in-memory retriever until Vector DB is implemented.
-    Mocking an exact match by returning ground-truth documents heavily scored.
-    """
-    def __init__(self, ground_truth: Dict[str, set[str]], documents: List[Chunk]):
-        self.ground_truth = ground_truth
-        self.documents = {doc.id: doc for doc in documents}
-        
-    def retrieve(self, query: Query, top_k: int = 5, **kwargs) -> RetrievalResult:
-        # Simple mock logic: If we know the truth, return it to test flow
-        relevant_ids = list(self.ground_truth.get(query.id, set()))
-        chunks = []
-        for i, doc_id in enumerate(relevant_ids[:top_k]):
-            if doc_id in self.documents:
-                chunks.append(
-                    RetrievedChunk(
-                        chunk=self.documents[doc_id],
-                        score=1.0 - (i * 0.1),
-                        rank=i
-                    )
-                )
-        return RetrievalResult(query=query, chunks=chunks, metadata={"source": "in_memory_mock"})
 
-    def add_chunks(self, chunks: list[Chunk], **kwargs) -> None:
-        pass
 
 
 def tabulate_results(all_metrics: List[Optional[Dict[str, float]]], total_time: float) -> None:
@@ -104,26 +88,30 @@ async def main_async(args: argparse.Namespace) -> None:
         logging.error(f"Failed to load dataset: {e}")
         return
         
-    # Convert documents to Chunks for InMemRetriever
-    chunks = [
-        Chunk(
-            id=doc.id, 
-            content=doc.content, 
-            metadata=ChunkMetadata(
-                document_id=doc.id, chunk_index=0, start_char=0, end_char=len(doc.content)
-            )
-        ) 
-        for doc in raw_documents
-    ]
+    # Convert documents to Chunks using FixedSizeChunker
+    logging.info("Chunking documents...")
+    chunker = FixedSizeChunker(exp_config.chunker)
+    chunks = []
+    for doc in raw_documents:
+        chunks.extend(chunker.chunk(doc))
+    logging.info(f"Generated {len(chunks)} chunks from {len(raw_documents)} documents.")
 
     # 3. Component Instantiation
     logging.info("Initializing Generator and Evaluator...")
     generator = UniversalGenerator(exp_config.generator)
     evaluator = RetrievalEvaluator(exp_config.evaluator)
     
-    # Use Mock Retriever until ChromaDB (Task 9)
-    logging.info("Initializing In-Memory Mock Retriever...")
-    retriever = InMemRetriever(ground_truth=ground_truth, documents=chunks)
+    logging.info("Initializing Embedder and computing embeddings...")
+    embedder = SentenceTransformersEmbedder(exp_config.embedder)
+    embeddings = embedder.embed_chunks(chunks)
+    
+    logging.info("Initializing ChromaRetriever and indexing chunks...")
+    retriever_config = ChromaRetrieverConfig(**raw_config.get("retriever", {}))
+    retriever = ChromaRetriever(config=retriever_config, embedder=embedder)
+    
+    # Clear the collection to ensure a fresh index for each run
+    retriever.clear()
+    retriever.add_chunks(chunks, embeddings)
     
     # Pipeline Setup
     pipeline = RAGPipeline(

@@ -17,7 +17,7 @@ embedder:
   normalize_embeddings: true
 
 generator:
-  model_name: "ollama/llama3.1"
+  model_name: "ollama/llama3:8b"
   temperature: 0.0
   max_tokens: 512
   api_base: "http://localhost:11434"
