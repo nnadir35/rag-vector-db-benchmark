@@ -1,0 +1,31 @@
+experiment:
+  name: "baseline_ollama_squad"
+
+dataset:
+  split: "validation"
+  max_samples: 5
+  version: "squad_v2"
+
+chunker:
+  chunk_size: 512
+  overlap: 50
+
+embedder:
+  model_name: "all-MiniLM-L6-v2"
+  device: "cpu"
+  batch_size: 32
+  normalize_embeddings: true
+
+generator:
+  model_name: "ollama/llama3.1"
+  temperature: 0.0
+  max_tokens: 512
+  api_base: "http://localhost:11434"
+  system_prompt: "Answer based only on the provided context. Be highly concise."
+
+evaluator:
+  k_values: [1, 2, 3]
+
+pipeline:
+  top_k: 3
+  evaluate_retrieval: true

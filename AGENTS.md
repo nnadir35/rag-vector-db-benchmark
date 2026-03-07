@@ -11,9 +11,9 @@
 
 ```
 SON GÜNCELLEME : 07.03.2026
-AKTİF GÖREV    : 7. config_loader.py
-SONRAKİ GÖREV  : 8. run_experiment.py
-TAMAMLANAN     : 6/10
+AKTİF GÖREV    : 8. run_experiment.py
+SONRAKİ GÖREV  : 9. ChromaRetriever
+TAMAMLANAN     : 7/10
 ```
 
 ---
@@ -32,6 +32,7 @@ TAMAMLANAN     : 6/10
 - [x] 4. UniversalGenerator — 07.03.2026 ✅
 - [x] 5. RetrievalEvaluator — 07.03.2026 ✅
 - [x] 6. RAGPipeline — 07.03.2026 ✅
+- [x] 7. config_loader.py — 07.03.2026 ✅
 
 ---
 
@@ -45,8 +46,8 @@ Sırayı bozma. Her biri bir öncekine bağlı.
 - [x] **4. UniversalGenerator**
 - [x] **5. RetrievalEvaluator + metrics.py**
 - [x] **6. RAGPipeline**
-- [x] **7. config_loader.py** ← ŞU AN BUNU YAP
-- [ ] **8. run_experiment.py**
+- [x] **7. config_loader.py** 
+- [x] **8. run_experiment.py** ← ŞU AN BUNU YAP
 - [ ] **9. ChromaRetriever**
 - [ ] **10. GenerationEvaluator**
 
