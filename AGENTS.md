@@ -34,7 +34,7 @@ Henüz tamamlanan yok.
 
 Sırayı bozma. Her biri bir öncekine bağlı.
 
-- [ ] **1. FixedSizeChunker** ← ŞU AN BUNU YAP
+- [x] **1. FixedSizeChunker** ← ŞU AN BUNU YAP
 - [ ] **2. SentenceTransformersEmbedder**
 - [ ] **3. SQuAD Dataset Loader**
 - [ ] **4. OpenAIGenerator**
