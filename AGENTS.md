@@ -213,33 +213,41 @@ NOT: SQuAD'da ground truth şudur: bir sorunun cevabı belirli bir context parag
 
 ---
 
-### GÖREV 4: OpenAIGenerator
+### GÖREV 4: UniversalGenerator
 
 **PROMPT:**
 ```
 AGENTS.md'yi oku.
 
-GÖREV: src/generators/ klasörüne OpenAIGenerator implementasyonu yaz.
+GÖREV: src/generators/ klasörüne LiteLLM tabanlı UniversalGenerator implementasyonu yaz.
 
-1. src/generators/config.py → OpenAIGeneratorConfig
+1. src/generators/config.py → UniversalGeneratorConfig dataclass
    - @dataclass(frozen=True)
-   - model_name: str = "gpt-4o-mini"
-   - temperature: float = 0.0   (reproducibility için)
+   - model_name: str = "ollama/llama3.1" (Varsayılan olarak yerel model)
+   - temperature: float = 0.0
    - max_tokens: int = 512
-   - system_prompt: str = "You are a helpful assistant. Answer based only on the provided context. If the answer is not in the context, say 'I don't know'."
-   - api_key: Optional[str] = None  (OPENAI_API_KEY env'den de okunabilmeli)
+   - api_base: Optional[str] = None (Ollama için http://localhost:11434 gerekebilir)
+   - api_key: Optional[str] = None (Groq veya OpenAI için)
+   - system_prompt: str = "Answer based only on the provided context."
 
-2. src/generators/openai_generator.py → OpenAIGenerator
-   - src/core/generation.py içindeki Generator ABC'yi implemente et
-   - generate(query, retrieved_chunks) → GenerationResult
-   - Context formatı:
-     "Context:\n[1] {chunk1.content}\n[2] {chunk2.content}\n\nQuestion: {query.text}"
-   - metadata'ya ekle: model_name, latency_seconds, prompt_tokens, completion_tokens
-   - openai paketi lazy import
+2. src/generators/universal_generator.py → UniversalGenerator
+   - src/core/generation.py içindeki Generator ABC'yi implemente et.
+   - 'litellm' kütüphanesini kullan. Metot içinde 'from litellm import completion' şeklinde lazy import yap.
+   - generate(query, retrieved_chunks) metodunda:
+     - Context'i şablonla birleştir: "Context:\n{chunks}\n\nQuestion: {query}"
+     - litellm.completion(model=self.config.model_name, messages=..., temperature=...) çağrısını yap.
+     - Dönen cevabı (GenerationResult) oluştururken metadata'ya 'provider' bilgisini model isminden ayıklayıp ekle.
 
-3. src/generators/registry.py → src/retrievers/registry.py'yi kopyala, Generator için uyarla
-4. src/generators/__init__.py → export'lar
-5. tests/generators/test_openai_generator.py → testler (openai mock'la)
+3. src/generators/registry.py → UniversalGenerator'ı register et.
+
+4. tests/generators/test_universal_generator.py → Testleri yaz.
+   - 'litellm.completion' fonksiyonunu mock'la.
+   - test_ollama_provider_call (model_name="ollama/llama3" iken doğru çağrılıyor mu?)
+   - test_groq_provider_call (model_name="groq/llama-3.1-8b" iken doğru çağrılıyor mu?)
+
+KURALLAR:
+- litellm kütüphanesi yüklü değilse ImportError verip kullanıcıyı uyarmalı.
+- Response içindeki token kullanım (usage) bilgilerini mutlaka GenerationResult.metadata'ya ekle.
 ```
 
 ---
