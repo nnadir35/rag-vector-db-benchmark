@@ -2,6 +2,33 @@
 
 A research-grade framework for systematically evaluating Retrieval-Augmented Generation (RAG) systems with a focus on vector database performance, retrieval quality, and end-to-end pipeline metrics.
 
+# RAG Vector DB Benchmark
+
+> **Let your business ask questions to its own data — and measure exactly how well it works.**
+
+This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipelines: how accurately an AI system retrieves relevant documents and generates correct answers from a company's internal knowledge base.
+
+## Real Benchmark Results (SQuAD v2 · 100 queries)
+
+| Metric | Score | What it means |
+|---|---|---|
+| MRR | **0.707** | On average, the correct answer is ranked 1st or 2nd |
+| Precision@1 | **0.610** | 61% of top results are directly relevant |
+| Recall@3 | **0.820** | 82% of relevant documents found in top 3 results |
+
+## What This Enables
+
+- **Drop in any LLM**: Ollama (local/private), OpenAI, Anthropic — swap with one config change
+- **Drop in any vector DB**: ChromaDB today, Pinecone or Weaviate tomorrow — no code changes
+- **Measure before you ship**: Know your retrieval quality with real numbers before going to production
+- **Full privacy option**: Runs entirely locally with Ollama — no data leaves your servers
+
+## Stack
+
+Python · ChromaDB · Ollama/llama3 · sentence-transformers · FastAPI · Gradio · LiteLLM
+
+---
+
 > **Repository Structure**: See [STRUCTURE.md](./STRUCTURE.md) for a detailed breakdown of the directory organization, component responsibilities, and design principles.
 
 ## Problem Definition
