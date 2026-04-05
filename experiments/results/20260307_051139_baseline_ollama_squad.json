@@ -40,7 +40,18 @@
       "evaluate_generation": true
     }
   },
-  "metrics_summary": {},
+  "metrics_summary": {
+    "mrr": 0.7067,
+    "precision@1": 0.61,
+    "recall@1": 0.61,
+    "ndcg@1": 0.61,
+    "precision@2": 0.385,
+    "recall@2": 0.77,
+    "ndcg@2": 0.7109,
+    "precision@3": 0.315,
+    "recall@3": 0.82,
+    "ndcg@3": 0.7359
+  },
   "results": [
     {
       "query": "In what country is Normandy located?",

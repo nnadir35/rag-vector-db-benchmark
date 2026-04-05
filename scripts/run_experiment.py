@@ -61,6 +61,18 @@ def tabulate_results(all_metrics: List[Optional[Dict[str, float]]], total_time: 
     print("=" * 50 + "\n")
 
 
+def _compute_summary(metrics_list: list) -> dict:
+    """Per-query metrik listesinden ortalama hesaplar."""
+    valid = [m for m in metrics_list if m is not None]
+    if not valid:
+        return {}
+    keys = valid[0].keys()
+    return {
+        key: round(sum(m[key] for m in valid) / len(valid), 4)
+        for key in keys
+    }
+
+
 async def main_async(args: argparse.Namespace) -> None:
     # 1. Load configuration
     try:
@@ -150,7 +162,7 @@ async def main_async(args: argparse.Namespace) -> None:
         "experiment_name": exp_config.name,
         "timestamp": ts,
         "raw_config": raw_config,
-        "metrics_summary": {},
+        "metrics_summary": _compute_summary(extracted_metrics),
         "results": [
             {
                 "query": r.query.text,
