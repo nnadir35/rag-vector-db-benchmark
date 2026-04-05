@@ -1,0 +1,1946 @@
+{
+  "experiment_name": "baseline_ollama_squad",
+  "timestamp": "20260405_213028",
+  "raw_config": {
+    "experiment": {
+      "name": "baseline_ollama_squad"
+    },
+    "dataset": {
+      "split": "validation",
+      "max_samples": 100,
+      "version": "squad_v2"
+    },
+    "chunker": {
+      "chunk_size": 512,
+      "overlap": 50
+    },
+    "embedder": {
+      "model_name": "all-MiniLM-L6-v2",
+      "device": "cpu",
+      "batch_size": 32,
+      "normalize_embeddings": true
+    },
+    "generator": {
+      "model_name": "ollama/llama3:8b",
+      "temperature": 0.0,
+      "max_tokens": 512,
+      "api_base": "http://localhost:11434",
+      "system_prompt": "Answer based only on the provided context. Be highly concise."
+    },
+    "evaluator": {
+      "k_values": [
+        1,
+        2,
+        3
+      ]
+    },
+    "pipeline": {
+      "top_k": 3,
+      "evaluate_retrieval": true,
+      "evaluate_generation": true
+    }
+  },
+  "metrics_summary": {},
+  "results": [
+    {
+      "query": "In what country is Normandy located?",
+      "response": "France.",
+      "latency": 54.01642084121704,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.2,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When were the Normans in Normandy?",
+      "response": "The Normans were in Normandy in the 10th and 11th centuries.",
+      "latency": 50.61946129798889,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "From which countries did the Norse originate?",
+      "response": "According to the context, the Norse originated from Denmark, Norway, and possibly Sweden.",
+      "latency": 60.84171175956726,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who was the Norse leader?",
+      "response": "Rollo.",
+      "latency": 57.20839786529541,
+      "metrics": {
+        "mrr": 0.3333333333333333,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.5,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "What century did the Normans first gain their separate identity?",
+      "response": "The 10th century.",
+      "latency": 64.53603315353394,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who gave their name to Normandy in the 1000's and 1100's",
+      "response": "The Normans.",
+      "latency": 38.43225026130676,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What is France a region of?",
+      "response": "France is a region of Gallia Lugdunensis.",
+      "latency": 46.0564079284668,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who did King Charles III swear fealty to?",
+      "response": "Rollo.",
+      "latency": 41.656532764434814,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "When did the Frankish identity emerge?",
+      "response": "The distinct cultural and ethnic identity of the Normans emerged initially in the first half of the 10th century.",
+      "latency": 52.59227395057678,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who was the duke in the battle of Hastings?",
+      "response": "Duke William II of Normandy.",
+      "latency": 48.974879026412964,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who ruled the duchy of Normandy",
+      "response": "Rollo and his men (initially), later Duke William II of Normandy.",
+      "latency": 47.65131688117981,
+      "metrics": {
+        "mrr": 0.3333333333333333,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.5,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What religion were the Normans",
+      "response": "The Normans became exponents of Catholic orthodoxy.",
+      "latency": 44.1089448928833,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What type of major impact did the Norman dynasty have on modern Europe?",
+      "response": "Based on the provided context, the Norman dynasty had a major political, cultural, and military impact on medieval Europe and even the Near East.",
+      "latency": 54.921308755874634,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who was famed for their Christian spirit?",
+      "response": "Bohemund I.",
+      "latency": 51.18403124809265,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who assimilted the Roman language?",
+      "response": "The descendants of Rollo's Vikings, also known as Normans.",
+      "latency": 40.469093799591064,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "Who ruled the country of Normandy?",
+      "response": "Rollo (911-1016) and his sons by Emma, including Richard I of Normandy.",
+      "latency": 53.91927909851074,
+      "metrics": {
+        "mrr": 0.3333333333333333,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.5,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What principality did William the conquerer found?",
+      "response": "None. According to the context, it was Bohemond I, not William the Conqueror, who founded the Principality of Antioch in the Levant.",
+      "latency": 46.5267870426178,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What is the original meaning of the word Norman?",
+      "response": "According to the context, the original meaning of the word \"Norman\" is \"Norseman\" or \"Viking\", derived from Old Low Franconian Nortmann \"Northman\" or Old Norse Norðmaðr.",
+      "latency": 60.88733434677124,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When was the Latin version of the word Norman first recorded?",
+      "response": "According to the context, the Latinized versions of \"Norman\" were recorded in Medieval Latin in the 9th century.",
+      "latency": 49.91657090187073,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What name comes from the English words Normans/Normanz?",
+      "response": "The name \"Normans\" comes from the French words Normans/Normanz.",
+      "latency": 56.68697500228882,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "When was the French version of the word Norman first recorded?",
+      "response": "According to the provided context, the French version of the word \"Norman\" (Normands) was not explicitly mentioned as being recorded at a specific time. However, it is stated that the Old Low Franconian Nortmann \"Northman\" or Old Norse Norðmaðr was Latinized variously as Nortmannus, Normannus, or Nordmannus in Medieval Latin (9th century).",
+      "latency": 51.86681818962097,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.7,
+        "relevancy": 0.6
+      }
+    },
+    {
+      "query": "When was the Duchy of Normandy founded?",
+      "response": "According to the context, the Duchy of Normandy was established by treaty between King Charles III of West Francia and Rollo in 911.",
+      "latency": 58.53344011306763,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who did Rollo sign the treaty of Saint-Clair-sur-Epte with?",
+      "response": "King Charles III of West Francia.",
+      "latency": 62.194371938705444,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What river originally bounded the Duchy",
+      "response": "Based on the provided context, there is no mention of a specific river bounding the Duchy of Normandy. However, it can be inferred that the Duchy was situated in the former Frankish kingdom of Neustria, which suggests that it may have bordered rivers such as the Seine or the Loire.",
+      "latency": 65.68436980247498,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.7,
+        "relevancy": 0.6
+      }
+    },
+    {
+      "query": "when did Nors encampments ivolve into destructive incursions?",
+      "response": "Based on the provided context, it can be inferred that Norman encampments involved in destructive incursions around 1085, after the death of Robert.",
+      "latency": 55.30333423614502,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What treaty was established in the 9th century?",
+      "response": "The treaty of Saint-Clair-sur-Epte (911) between King Charles III of West Francia and Rollo.",
+      "latency": 47.34964609146118,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who established a treaty with King Charles the third of France?",
+      "response": "Rollo.",
+      "latency": 43.66783285140991,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "What did the French promises to protect Rollo and his men from?",
+      "response": "Further Viking incursions.",
+      "latency": 62.717947244644165,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who upon arriving gave the original viking settlers a common identity?",
+      "response": "Rollo.",
+      "latency": 50.52635478973389,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "When did Rollo begin to arrive in Normandy?",
+      "response": "According to the context, there is no mention of when Rollo began to arrive in Normandy. It only mentions that \"earlier Viking settlers had begun arriving in the 880s\" and that Rollo's contingents raided and settled Normandy later on.",
+      "latency": 55.63569688796997,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What Viking groups were conquered by Rollo?",
+      "response": "None. According to the context, Rollo's contingents raided and settled Normandy, but there is no mention of him conquering other Viking groups.",
+      "latency": 78.18391013145447,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What was the Norman religion?",
+      "response": "The Norman religion was Catholic orthodoxy.",
+      "latency": 70.28192090988159,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What part of France were the Normans located?",
+      "response": "Normandy.",
+      "latency": 84.71474194526672,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What was replace with the Norse religion?",
+      "response": "Catholicism (Christianity).",
+      "latency": 93.12873601913452,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "What did maternal Old Norse traditions merge with?",
+      "response": "Maternal Frankish heritage.",
+      "latency": 101.17005014419556,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.6
+      }
+    },
+    {
+      "query": "What language replaced the Gallo-Romance language?",
+      "response": "Old Norse language.",
+      "latency": 87.91121315956116,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.2,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "What was one of the Norman's major exports?",
+      "response": "Fighting horsemen.",
+      "latency": 92.98290205001831,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.6,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who adopted the fuedel doctrines of the Normans?",
+      "response": "The Normans themselves adopted the growing feudal doctrines of the rest of France.",
+      "latency": 106.97383499145508,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What was one of the Norman's major imports?",
+      "response": "The Gallo-Romance language of the Frankish land they settled, which became known as Norman, Normaund or Norman French.",
+      "latency": 80.52871608734131,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "Who's arristocracy eventually served as avid Crusaders?",
+      "response": "The Normans of Italy, France, and England.",
+      "latency": 100.30891180038452,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who was the Normans' main enemy in Italy, the Byzantine Empire and Armenia?",
+      "response": "The Seljuk Turks.",
+      "latency": 100.74504399299622,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who entered Italy soon after the Byzantine Empire?",
+      "response": "The Normans.",
+      "latency": 82.76471590995789,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who did the Normans fight in Italy?",
+      "response": "The Normans fought against the Pechenegs, Bulgars, and especially the Seljuk Turks in Italy.",
+      "latency": 109.03200101852417,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who did the Normans encourage to come to the south?",
+      "response": "The Lombards.",
+      "latency": 75.86465501785278,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.2,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "During what campaign did the Vargian and Lombard fight?",
+      "response": "According to the context, the Varangian and Lombard contingents fought alongside Norman mercenaries during the Sicilian campaign of George Maniaces in 1038-40.",
+      "latency": 91.26087379455566,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When did Herve serve as a Byzantine general?",
+      "response": "According to the context, Hervé served as a Byzantine general in the 1050s.",
+      "latency": 597.5941712856293,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "When did Robert Crispin go up against the Turks?",
+      "response": "In the 1060s.",
+      "latency": 576.0621140003204,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who ruined Roussel de Bailleul's plans for an independent state?",
+      "response": "The Byzantines.",
+      "latency": 586.5972707271576,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who was the first Byzantine mercenary to serve with the Normans?",
+      "response": "The context does not provide information about a Norman serving as a mercenary with the Byzantines. Instead, it mentions Normans serving as mercenaries in the Byzantine Empire and fighting alongside Byzantine forces. Therefore, there is no answer to this question based on the provided context.",
+      "latency": 582.2386386394501,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "When did Herve serve as a Norman general?",
+      "response": "According to the context, Hervé served as a Norman general in the 1050s.",
+      "latency": 591.5278770923615,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who ruined Alexius Komnenos plans for an independent state?",
+      "response": "Bohemond.",
+      "latency": 81.07305598258972,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When did Herve go up against the Turks?",
+      "response": "According to the context, Hervé went up against the Turks in the 1050s as a Norman mercenary serving as a Byzantine general.",
+      "latency": 85.1689338684082,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What was the name of the Norman castle?",
+      "response": "There is no mention of a specific Norman castle in the provided context.",
+      "latency": 88.65954208374023,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who was the leader when the Franks entered the Euphrates valley?",
+      "response": "Raimbaud.",
+      "latency": 74.88437914848328,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who did the Normans team up with in Anatolia?",
+      "response": "The Normans teamed up with Turkish forces to aid in the destruction of Armenian vassal-states of Sassoun and Taron in far eastern Anatolia.",
+      "latency": 67.9671528339386,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who joined Norman forces in the destruction of the Armenians?",
+      "response": "Some Normans joined Turkish forces to aid in the destruction of the Armenians vassal-states of Sassoun and Taron.",
+      "latency": 41.223515033721924,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who did the Turks take up service with?",
+      "response": "The Normans.",
+      "latency": 37.36876583099365,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "What Frank led Norman forces?",
+      "response": "Oursel.",
+      "latency": 47.4813768863678,
+      "metrics": {
+        "mrr": 0.3333333333333333,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.5,
+        "faithfulness": 0.9,
+        "relevancy": 0.1
+      }
+    },
+    {
+      "query": "Where did Oursel lead the Franks?",
+      "response": "The upper Euphrates valley in northern Syria.",
+      "latency": 51.262327909469604,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "What were the origins of the Raouliii family?",
+      "response": "The Raoulii family was descended from an Italo-Norman named Raoul.",
+      "latency": 44.20481896400452,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Where were several Norman mercenary familes originate from?",
+      "response": "Denmark, Iceland, and Norway.",
+      "latency": 38.106404066085815,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who did the Normans serve under in the 10th century?",
+      "response": "King Charles III of West Francia.",
+      "latency": 41.58895516395569,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What expedition did George Maniaces lead in the 10th century?",
+      "response": "None. The context mentions that George Maniaces led a campaign in Sicily from 1038-40, but not in the 10th century.",
+      "latency": 45.53428316116333,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.0,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "What was the name of the count of Apulia ",
+      "response": "Robert Guiscard.",
+      "latency": 52.25291395187378,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 1.0
+      }
+    },
+    {
+      "query": "When did Dyrrachium  fall to the Normans?",
+      "response": "According to the context, Dyrrachium fell to the Normans twice:\n\n1. Initially, it fell to the Normans before February 1082.\n2. Later, in 1185, it was recaptured by Byzantine forces.",
+      "latency": 49.37729787826538,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "How many men were in Robert's army?",
+      "response": "According to the context [1], Robert Guiscard led an army of 30,000 men.",
+      "latency": 46.81028985977173,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who ultimatly drove the Byzantines out of Europe?",
+      "response": "Robert Guiscard.",
+      "latency": 39.78936004638672,
+      "metrics": {
+        "mrr": 0.3333333333333333,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.5,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What pope opposed Roberts campaign?",
+      "response": "None, according to the provided context. Pope Gregory VII gave his consent and Robert acted as his vassal.",
+      "latency": 52.7517728805542,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "What fell to the Normans in the 10th century?",
+      "response": "Their distinct cultural and ethnic identity emerged initially in the first half of the 10th century.",
+      "latency": 43.574800968170166,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "How many men did Roberts army face?",
+      "response": "The answer is not provided in the given context.",
+      "latency": 49.337424993515015,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Where did the Normans and Byzantines sign the peace treaty?",
+      "response": "Deabolis.",
+      "latency": 47.1424503326416,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who was Robert's son?",
+      "response": "The context does not mention Robert's son. It only mentions Robert Guiscard as a Norman adventurer and his military successes.",
+      "latency": 49.77485704421997,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "What river was Petrela located by?",
+      "response": "Deabolis.",
+      "latency": 39.084744930267334,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who did the Normans besiege in the 11th century?",
+      "response": "The Normans besieged Jerusalem in the 11th century.",
+      "latency": 52.820839166641235,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 0.6,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "Who did Robert lead agains Dyrrachium in 1107?",
+      "response": "There is no mention of Robert leading an attack on Dyrrachium in 1107. The context only mentions a Norman army invading Dyrrachium in 1185 and Robert's death in 1085, but not any involvement with Dyrrachium in 1107.",
+      "latency": 43.65864109992981,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who was Bohemond's son?",
+      "response": "The context does not mention Bohemond's son. It only mentions his brother-in-law, Eustace II, Count of Boulogne.",
+      "latency": 40.79885697364807,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "When did the Normans attack Dyrrachium?",
+      "response": "According to the context, the Normans attacked Dyrrachium in 1185 and again in 1107 under the command of Bohemond.",
+      "latency": 43.9401319026947,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What was the naval base called?",
+      "response": "Dyrrachium.",
+      "latency": 37.253058195114136,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Where was Dyrrachium located?",
+      "response": "Dyrrachium was one of the most important naval bases of the Adriatic.",
+      "latency": 46.8243191242218,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.6
+      }
+    },
+    {
+      "query": "Who attacked Dyrrachium in the 11th century?",
+      "response": "The Normans under Bohemond (1107) and again later in 1185.",
+      "latency": 51.12545204162598,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who betrayed the Normans?",
+      "response": "Based on the provided context, there is no mention of someone betraying the Normans. The text only discusses the origins and relationships of the Normans with other regions, but does not mention any instances of betrayal.",
+      "latency": 41.60763096809387,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "What naval base fell to the Normans?",
+      "response": "None. According to the context, Dyrrachium, one of the most important naval bases of the Adriatic, fell to Byzantine hands in 1185.",
+      "latency": 47.629096269607544,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 1.0,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "Who did Emma Marry?",
+      "response": "Emma married King Ethelred II of England.",
+      "latency": 44.241735219955444,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who was Emma's brother?",
+      "response": "Emma's brother was Duke Richard II of Normandy.",
+      "latency": 38.118346214294434,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "To where did Ethelred flee?",
+      "response": "Normandy.",
+      "latency": 34.12902092933655,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who kicked Ethelred out?",
+      "response": "Sweyn Forkbeard.",
+      "latency": 43.01311206817627,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who married Cnut the Great?",
+      "response": "Emma.",
+      "latency": 34.66093707084656,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When did Richard II flee to Normandy?",
+      "response": "Not mentioned in the context.",
+      "latency": 40.43464684486389,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who's major ports were controlled by the English?",
+      "response": "The Danes and Anglo-Danes from the English Danelaw under Norse control.",
+      "latency": 47.50044393539429,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who was Edward the Confessor's half-brother?",
+      "response": "Harthacnut.",
+      "latency": 37.59271717071533,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When did Edward return?",
+      "response": "1041.",
+      "latency": 40.71938896179199,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Who did Edward make archbishop of Canterbury?",
+      "response": "Robert of Jumièges.",
+      "latency": 37.830411195755005,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When did Edward the Confessor's son return from his fathers refuge?",
+      "response": "There is no mention of Edward the Confessor having sons or them returning from a father's refuge in the provided context.",
+      "latency": 44.1078519821167,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "What kind of force did Harthacnut establish?",
+      "response": "None. The context does not mention Harthacnut at all.",
+      "latency": 30.114017009735107,
+      "metrics": {
+        "mrr": 0.0,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.0,
+        "recall@2": 0.0,
+        "ndcg@2": 0.0,
+        "precision@3": 0.0,
+        "recall@3": 0.0,
+        "ndcg@3": 0.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.0
+      }
+    },
+    {
+      "query": "Who made Robert of Jumieges earl of Hereford?",
+      "response": "Edward the Confessor.",
+      "latency": 33.94990372657776,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.5,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.8
+      }
+    },
+    {
+      "query": "Where did Harold II die?",
+      "response": "The Battle of Hastings.",
+      "latency": 39.19030499458313,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.2
+      }
+    },
+    {
+      "query": "Who killed Harold II? ",
+      "response": "Duke William II of Normandy.",
+      "latency": 53.119386196136475,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When was the Battle of Hastings?",
+      "response": "1066.",
+      "latency": 46.1233971118927,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 1.0,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "Who was the ruling class ahead of the Normans?",
+      "response": "The Anglo-Saxons were the ruling class in England before the Normans conquered it in 1066.",
+      "latency": 49.77070474624634,
+      "metrics": {
+        "mrr": 0.5,
+        "precision@1": 0.0,
+        "recall@1": 0.0,
+        "ndcg@1": 0.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 0.6309297535714575,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 0.6309297535714575,
+        "faithfulness": 0.9,
+        "relevancy": 0.9
+      }
+    },
+    {
+      "query": "When did King Harold II conquer England?",
+      "response": "King Harold II was killed at the Battle of Hastings in 1066, but he didn't conquer England. He was the one who was conquered by Duke William II of Normandy.",
+      "latency": 43.137940883636475,
+      "metrics": {
+        "mrr": 1.0,
+        "precision@1": 1.0,
+        "recall@1": 1.0,
+        "ndcg@1": 1.0,
+        "precision@2": 0.5,
+        "recall@2": 1.0,
+        "ndcg@2": 1.0,
+        "precision@3": 0.3333333333333333,
+        "recall@3": 1.0,
+        "ndcg@3": 1.0,
+        "faithfulness": 0.2,
+        "relevancy": 0.8
+      }
+    }
+  ]
+}

@@ -1,3 +1,5 @@
 __pycache__/
+.venv/
 .env
 prompts/
+chroma_api_db/

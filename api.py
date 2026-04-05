@@ -8,8 +8,7 @@ from src.utils.config_loader import build_component_configs, load_yaml
 from src.chunkers.fixed_size_chunker import FixedSizeChunker
 from src.generators.universal_generator import UniversalGenerator
 from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
-from src.retrievers.chroma_retriever import ChromaRetriever
-from src.retrievers.config import ChromaRetrieverConfig
+from src.retrievers.factory import build_retriever_from_yaml
 from src.pipeline.rag_pipeline import RAGPipeline
 from src.core.types import Document
 
@@ -46,9 +45,7 @@ async def lifespan(app: FastAPI):
     embedder = SentenceTransformersEmbedder(exp_config.embedder)
     generator = UniversalGenerator(exp_config.generator)
     
-    # Chroma Retriever
-    retriever_config = ChromaRetrieverConfig(**raw_config.get("retriever", {}))
-    retriever = ChromaRetriever(config=retriever_config, embedder=embedder)
+    retriever = build_retriever_from_yaml(raw_config, embedder)
     
     pipeline = RAGPipeline(
         retriever=retriever,

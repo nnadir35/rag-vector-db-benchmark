@@ -8,7 +8,6 @@ evaluation datasets, saving results logically, and displaying them.
 
 import argparse
 import asyncio
-import itertools
 import json
 import logging
 import os
@@ -26,18 +25,12 @@ from src.generators.universal_generator import UniversalGenerator
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.evaluators.generation_evaluator import GenerationEvaluator
 from src.pipeline.rag_pipeline import RAGPipeline
-from src.core.retrieval import Retriever
-from src.core.types import Query, RetrievalResult, RetrievedChunk, Chunk, ChunkMetadata, Embedding
 from src.chunkers.fixed_size_chunker import FixedSizeChunker
 from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
-from src.retrievers.chroma_retriever import ChromaRetriever
-from src.retrievers.config import ChromaRetrieverConfig
+from src.retrievers.factory import build_retriever_from_yaml
 
 # Configure simple logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
-
-
 
 
 def tabulate_results(all_metrics: List[Optional[Dict[str, float]]], total_time: float) -> None:
@@ -107,9 +100,8 @@ async def main_async(args: argparse.Namespace) -> None:
     embedder = SentenceTransformersEmbedder(exp_config.embedder)
     embeddings = embedder.embed_chunks(chunks)
     
-    logging.info("Initializing ChromaRetriever and indexing chunks...")
-    retriever_config = ChromaRetrieverConfig(**raw_config.get("retriever", {}))
-    retriever = ChromaRetriever(config=retriever_config, embedder=embedder)
+    logging.info("Initializing retriever and indexing chunks...")
+    retriever = build_retriever_from_yaml(raw_config, embedder)
     
     # Clear the collection to ensure a fresh index for each run
     retriever.clear()

@@ -90,3 +90,38 @@ class ChromaRetrieverConfig:
         
         if not self.collection_name:
             raise ValueError("collection_name cannot be empty")
+
+
+@dataclass(frozen=True)
+class QdrantRetrieverConfig:
+    """Configuration for QdrantRetriever.
+
+    Attributes:
+        collection_name: Name of the Qdrant collection to use.
+        distance_metric: Distance function for vector search. Supported values
+            align with Chroma-style names: 'cosine', 'l2' (or 'euclidean'), 'ip' (or 'dot').
+        in_memory: If True, use an ephemeral in-memory Qdrant instance (``:memory:``).
+        persist_path: When ``in_memory`` is False, local persistence directory for Qdrant.
+    """
+
+    collection_name: str = field(default="rag_benchmark")
+    distance_metric: str = field(default="cosine")
+    in_memory: bool = field(default=True)
+    persist_path: Optional[str] = field(default=None)
+
+    def __post_init__(self) -> None:
+        """Validate configuration parameters."""
+        valid_metrics = {"cosine", "l2", "euclidean", "ip", "dot"}
+        if self.distance_metric not in valid_metrics:
+            raise ValueError(
+                f"distance_metric must be one of {valid_metrics}, "
+                f"got '{self.distance_metric}'"
+            )
+
+        if not self.collection_name:
+            raise ValueError("collection_name cannot be empty")
+
+        if not self.in_memory and self.persist_path is None:
+            raise ValueError(
+                "persist_path must be provided when in_memory is False"
+            )

@@ -31,6 +31,24 @@ Python · ChromaDB · Ollama/llama3 · sentence-transformers · FastAPI · Gradi
 
 > **Repository Structure**: See [STRUCTURE.md](./STRUCTURE.md) for a detailed breakdown of the directory organization, component responsibilities, and design principles.
 
+## Installation
+
+From the repository root:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Run benchmarks and tests from the same directory (scripts add the project root to `sys.path`):
+
+```bash
+python scripts/run_experiment.py --config experiments/configs/baseline_ollama.yaml
+python -m pytest tests/ -q
+python api.py   # FastAPI on http://0.0.0.0:8000  (requires Ollama if using default generator)
+```
+
 ## Problem Definition
 
 RAG systems combine information retrieval with language generation, creating complex interactions between retrieval components (vector databases, embedding models) and generation components (LLMs, prompt engineering). Current evaluation practices often conflate these concerns, making it difficult to:
