@@ -267,12 +267,12 @@ class QdrantRetriever(Retriever):
 
             client = self._get_client()
 
-            hits = client.search(
+            hits = client.query_points(
                 collection_name=self._config.collection_name,
-                query_vector=list(query_embedding.vector),
+                query=list(query_embedding.vector),
                 limit=top_k,
                 with_payload=True,
-            )
+            ).points
 
             retrieval_time = time.time() - start_time
 
