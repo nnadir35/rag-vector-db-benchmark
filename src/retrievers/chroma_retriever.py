@@ -7,7 +7,8 @@ that uses ChromaDB as the vector database backend.
 import json
 import os
 import time
-from typing import TYPE_CHECKING, Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import chromadb
@@ -20,32 +21,32 @@ from ..core.types import (
     Chunk,
     Embedding,
     Query,
-    RetrievedChunk,
     RetrievalResult,
+    RetrievedChunk,
 )
 from .config import ChromaRetrieverConfig
 
 
 class ChromaRetriever(Retriever):
     """ChromaDB-based retriever implementation."""
-    
+
     def __init__(
         self,
         config: ChromaRetrieverConfig,
         embedder: Embedder,
     ) -> None:
         """Initialize ChromaDB retriever.
-        
+
         Args:
             config: Configuration for Chroma usage
             embedder: Embedder instance to use for queries
         """
         self._config = config
         self._embedder = embedder
-        
-        self._client: Optional[Any] = None
-        self._collection: Optional[Any] = None
-        
+
+        self._client: Any | None = None
+        self._collection: Any | None = None
+
     def _ensure_chroma_imported(self) -> None:
         """Ensure chromadb module is lazily imported."""
         global chromadb
@@ -93,7 +94,7 @@ class ChromaRetriever(Retriever):
 
         persist_env = os.getenv("CHROMA_PERSIST_DIRECTORY")
         if persist_env is not None and persist_env.strip() != "":
-            persist_path: Optional[str] = persist_env.strip()
+            persist_path: str | None = persist_env.strip()
         else:
             persist_path = self._config.persist_directory
 
@@ -117,7 +118,7 @@ class ChromaRetriever(Retriever):
     def _chroma_collection(self) -> "chromadb.Collection":
         """Get or create Chroma collection."""
         self._ensure_chroma_imported()
-        
+
         if self._collection is None:
             self._client = self._create_chroma_client()
             try:
@@ -141,7 +142,7 @@ class ChromaRetriever(Retriever):
             "start_char": chunk.metadata.start_char,
             "end_char": chunk.metadata.end_char,
         }
-        
+
         for key, value in chunk.metadata.custom.items():
             if isinstance(value, (str, int, float, bool)):
                 metadata[f"custom_{key}"] = value
@@ -155,7 +156,7 @@ class ChromaRetriever(Retriever):
     def _dict_to_chunk(self, chunk_id: str, content: str, metadata: dict) -> Chunk:
         """Reconstruct Chunk from Chroma metadata."""
         from ..core.types import ChunkMetadata
-        
+
         custom_metadata = {}
         for key, value in metadata.items():
             if key.startswith("custom_"):
@@ -166,7 +167,7 @@ class ChromaRetriever(Retriever):
                     custom_metadata[custom_key] = parsed
                 except (TypeError, ValueError):
                     custom_metadata[custom_key] = value
-                    
+
         chunk_metadata = ChunkMetadata(
             document_id=metadata["document_id"],
             chunk_index=metadata["chunk_index"],
@@ -174,7 +175,7 @@ class ChromaRetriever(Retriever):
             end_char=metadata["end_char"],
             custom=custom_metadata,
         )
-        
+
         return Chunk(
             id=chunk_id,
             content=content,
@@ -192,15 +193,15 @@ class ChromaRetriever(Retriever):
                 f"Number of chunks ({len(chunks)}) must match "
                 f"number of embeddings ({len(embeddings)})"
             )
-            
+
         try:
             collection = self._chroma_collection
-            
+
             ids = [c.id for c in chunks]
             documents = [c.content for c in chunks]
             metadatas = [self._chunk_metadata_to_dict(c) for c in chunks]
             vecs = [list(e.vector) for e in embeddings]
-            
+
             batch_size = 100
             for i in range(0, len(ids), batch_size):
                 collection.add(
@@ -209,7 +210,7 @@ class ChromaRetriever(Retriever):
                     documents=documents[i:i + batch_size],
                     metadatas=metadatas[i:i + batch_size],
                 )
-                
+
         except Exception as e:
             raise RuntimeError(f"Failed to add chunks to Chroma: {e}") from e
 
@@ -218,16 +219,16 @@ class ChromaRetriever(Retriever):
         start_time = time.time()
         query_embedding = self._embedder.embed_query(query)
         embedding_time = time.time() - start_time
-        
+
         result = self.retrieve_with_embedding(
             query_embedding=query_embedding,
             top_k=top_k,
             query_id=query.id,
         )
-        
+
         metadata = dict(result.metadata)
         metadata["embedding_latency_seconds"] = embedding_time
-        
+
         return RetrievalResult(
             query=query,
             chunks=result.chunks,
@@ -238,43 +239,43 @@ class ChromaRetriever(Retriever):
         self,
         query_embedding: Embedding,
         top_k: int = 10,
-        query_id: Optional[str] = None,
+        query_id: str | None = None,
     ) -> RetrievalResult:
         """Retrieve relevant chunks using a pre-computed query embedding."""
         try:
             start_time = time.time()
             collection = self._chroma_collection
-            
+
             # ChromaDB output mapping
             query_response = collection.query(
                 query_embeddings=[list(query_embedding.vector)],
                 n_results=top_k,
                 include=["documents", "metadatas", "distances"]
             )
-            
+
             retrieval_time = time.time() - start_time
-            
+
             retrieved_chunks = []
-            
+
             if query_response["ids"] and len(query_response["ids"][0]) > 0:
                 ids = query_response["ids"][0]
                 documents = query_response["documents"][0]
                 metadatas = query_response["metadatas"][0]
                 distances = query_response["distances"][0]
-                
+
                 for rank in range(len(ids)):
                     chunk = self._dict_to_chunk(
                         chunk_id=ids[rank],
                         content=documents[rank],
                         metadata=metadatas[rank],
                     )
-                    
+
                     distance = distances[rank]
-                    # Score interpretation for Chroma: 
+                    # Score interpretation for Chroma:
                     # If cosine, distance is cosine distance, score = 1 - distance
                     # If l2, distance is Euclidean squared, score = -distance
                     score = 1.0 - distance if self._config.distance_metric == "cosine" else -distance
-                    
+
                     retrieved_chunks.append(
                         RetrievedChunk(
                             chunk=chunk,
@@ -282,21 +283,21 @@ class ChromaRetriever(Retriever):
                             rank=rank,
                         )
                     )
-            
+
             query = Query(id=query_id or "unknown", text="")
-            
+
             metadata = {
                 "retrieval_latency_seconds": retrieval_time,
                 "num_results": len(retrieved_chunks),
                 "collection_name": self._config.collection_name,
             }
-            
+
             return RetrievalResult(
                 query=query,
                 chunks=retrieved_chunks,
                 metadata=metadata,
             )
-            
+
         except Exception as e:
             raise RuntimeError(f"Failed to retrieve from Chroma: {e}") from e
 

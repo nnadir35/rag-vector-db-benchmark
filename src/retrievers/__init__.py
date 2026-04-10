@@ -5,12 +5,12 @@ with various vector databases and retrieval systems.
 """
 
 from .chroma_retriever import ChromaRetriever
-from .factory import build_retriever_from_yaml
 from .config import (
     ChromaRetrieverConfig,
     PineconeRetrieverConfig,
     QdrantRetrieverConfig,
 )
+from .factory import build_retriever_from_yaml
 from .pinecone_retriever import PineconeRetriever
 from .qdrant_retriever import QdrantRetriever
 from .registry import (

@@ -34,19 +34,19 @@ def sample_chunks():
 def mock_litellm():
     """Mock the litellm library and completion call."""
     mock_llm = MagicMock()
-    
+
     mock_response = MagicMock()
     mock_choice = MagicMock()
     mock_choice.message.content = "John is an engineer."
     mock_response.choices = [mock_choice]
-    
+
     mock_usage = MagicMock()
     mock_usage.prompt_tokens = 15
     mock_usage.completion_tokens = 5
     mock_response.usage = mock_usage
-    
+
     mock_llm.completion.return_value = mock_response
-    
+
     with patch.dict(sys.modules, {'litellm': mock_llm}):
         yield mock_llm
 
@@ -58,16 +58,16 @@ def test_ollama_provider_call(mock_litellm, sample_query, sample_chunks):
         api_base="http://localhost:11434"
     )
     generator = UniversalGenerator(config)
-    
+
     res = generator.generate(sample_query, sample_chunks)
-    
+
     # Check if mock was called with corresponding model info
     mock_litellm.completion.assert_called_once()
     kwargs = mock_litellm.completion.call_args[1]
-    
+
     assert kwargs["model"] == "ollama/llama3.1"
     assert kwargs["api_base"] == "http://localhost:11434"
-    
+
     # Check that metadata has correct provider
     assert res.metadata["provider"] == "ollama"
     assert res.metadata["prompt_tokens"] == 15
@@ -82,9 +82,9 @@ def test_groq_provider_call(mock_litellm, sample_query, sample_chunks):
         api_key="fake-groq-key"
     )
     generator = UniversalGenerator(config)
-    
+
     res = generator.generate(sample_query, sample_chunks)
-    
+
     kwargs = mock_litellm.completion.call_args[1]
     assert kwargs["model"] == "groq/llama-3.1-8b"
     assert kwargs["api_key"] == "fake-groq-key"

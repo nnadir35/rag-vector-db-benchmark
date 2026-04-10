@@ -1,12 +1,12 @@
 """Factory for constructing retriever instances from YAML-loaded configuration."""
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.embedding import Embedder
 from ..core.retrieval import Retriever
 
 
-def build_retriever_from_yaml(raw_config: Dict[str, Any], embedder: Embedder) -> Retriever:
+def build_retriever_from_yaml(raw_config: dict[str, Any], embedder: Embedder) -> Retriever:
     """Instantiate the retriever specified by ``retriever.type`` in the YAML config.
 
     Args:

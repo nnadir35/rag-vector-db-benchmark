@@ -6,7 +6,7 @@ end-to-end question answering requests.
 
 import asyncio
 import time
-from typing import Dict, List, Optional, Sequence
+from collections.abc import Sequence
 
 from ..core.evaluation import Evaluator
 from ..core.generation import Generator
@@ -18,21 +18,21 @@ from .result import PipelineResult
 
 class RAGPipeline:
     """End-to-end Retrieval-Augmented Generation pipeline.
-    
+
     This class combines a Retriever and a Generator, and optionally routes
     through an Evaluator to produce metrics alongside answers.
     """
-    
+
     def __init__(
         self,
         retriever: Retriever,
         generator: Generator,
         config: RAGPipelineConfig,
-        retrieval_evaluator: Optional[Evaluator] = None,
-        generation_evaluator: Optional[Evaluator] = None,
+        retrieval_evaluator: Evaluator | None = None,
+        generation_evaluator: Evaluator | None = None,
     ) -> None:
         """Initialize the pipeline.
-        
+
         Args:
             retriever: Component yielding relevant chunks from a vector DB.
             generator: Component generating the answer from retrieved context.
@@ -48,51 +48,51 @@ class RAGPipeline:
     async def run(
         self,
         query: str,
-        ground_truth_ids: Optional[List[str]] = None
+        ground_truth_ids: list[str] | None = None
     ) -> PipelineResult:
         """Execute the pipeline asynchronously for a single query.
-        
+
         Args:
             query: The user's input string.
             ground_truth_ids: Valid document ids used if evaluation is enabled.
-            
+
         Returns:
             PipelineResult structure mapping latency, metrics, and answers.
         """
         start_time = time.time()
-        
+
         # Structure the query
         # ID could be deterministic or just random natively, but typically
         # it might be assigned upstream. We'll use a time-based ID if none exists.
         q_obj = Query(id=f"q_{time.time_ns()}", text=query)
-        
+
         # 1. Retrieve
         # Assuming retrieve may eventually be async, but currently
         # standard interface is sync. We will wrap it in asyncio.to_thread if necessary,
         # but for now we follow the regular synchronous interface within async def.
         # Future-proofing by using async structure where possible.
         retrieval_result = await asyncio.to_thread(
-            self._retriever.retrieve, 
-            q_obj, 
+            self._retriever.retrieve,
+            q_obj,
             top_k=self._config.top_k
         )
-        
+
         # 2. Evaluate Retrieval (if enabled and truths exist)
-        metrics: Optional[Dict[str, float]] = None
+        metrics: dict[str, float] | None = None
         if self._config.evaluate_retrieval and self._retrieval_evaluator and ground_truth_ids:
             metrics = await asyncio.to_thread(
                 self._retrieval_evaluator.evaluate,
                 retrieval_result,
                 set(ground_truth_ids)
             )
-            
+
         # 3. Generate
         generation_result = await asyncio.to_thread(
             self._generator.generate,
             q_obj,
             retrieval_result.chunks
         )
-        
+
         # Structure final RAG Response
         rag_response = RAGResponse(
             query=q_obj,
@@ -103,7 +103,7 @@ class RAGPipeline:
                 "generation_metadata": generation_result.metadata,
             }
         )
-        
+
         # 4. Evaluate Generation
         if getattr(self._config, "evaluate_generation", False) and getattr(self, "_generation_evaluator", None):
             gen_metrics = await asyncio.to_thread(
@@ -113,27 +113,27 @@ class RAGPipeline:
             if metrics is None:
                 metrics = {}
             metrics.update(gen_metrics)
-        
+
         total_time = time.time() - start_time
-        
+
         return PipelineResult(
             query=q_obj,
             rag_response=rag_response,
             retrieval_metrics=metrics,
             total_latency_seconds=total_time
         )
-        
+
     async def run_batch(
         self,
         queries: Sequence[str],
-        ground_truths: Optional[Sequence[List[str]]] = None
-    ) -> List[PipelineResult]:
+        ground_truths: Sequence[list[str]] | None = None
+    ) -> list[PipelineResult]:
         """Execute the pipeline across multiple queries concurrently.
-        
+
         Args:
             queries: Sequence of string queries.
             ground_truths: Sequence of ground truth ID lists (matching queries).
-            
+
         Returns:
             List of PipelineResult objects preserving input order.
         """
@@ -142,12 +142,12 @@ class RAGPipeline:
                 f"Count of queries ({len(queries)}) must match "
                 f"count of ground_truths ({len(ground_truths)})"
             )
-            
+
         tasks = []
         for i, q in enumerate(queries):
             truth = ground_truths[i] if ground_truths else None
             task = self.run(q, truth)
             tasks.append(task)
-            
+
         results = await asyncio.gather(*tasks)
         return list(results)

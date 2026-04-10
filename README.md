@@ -1,9 +1,11 @@
 # RAG Vector DB Benchmark
 
-A research-grade framework for systematically evaluating Retrieval-Augmented Generation (RAG) systems with a focus on vector database performance, retrieval quality, and end-to-end pipeline metrics.
+[![Python CI](https://github.com/YOUR_USERNAME/rag-vector-db-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/rag-vector-db-benchmark/actions/workflows/ci.yml)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
+[![Strict Type Checking](https://img.shields.io/badge/mypy-strict-green)](http://mypy-lang.org/)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-# RAG Vector DB Benchmark
-
+> 🚀 **[Quick Start: Explore the Interactive Demo Notebook here (`notebooks/example_evaluation.ipynb`)](notebooks/example_evaluation.ipynb)**
 > **Let your business ask questions to its own data — and measure exactly how well it works.**
 
 This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipelines: how accurately an AI system retrieves relevant documents and generates correct answers from a company's internal knowledge base.

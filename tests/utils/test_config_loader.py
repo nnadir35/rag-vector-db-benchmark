@@ -1,7 +1,7 @@
 """Tests for config parsing and object creation."""
 
 import sys
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
@@ -46,18 +46,18 @@ def test_build_component_configs():
         "pipeline": {"top_k": 3},
         "dataset": {"max_samples": 5}
     }
-    
+
     exp_config = build_component_configs(raw_dict)
-    
+
     # Check experiment name
     assert exp_config.name == "hello_rag"
-    
+
     # Check populated class fields
     assert exp_config.generator.model_name == "ollama/llama3.1"
     assert exp_config.generator.max_tokens == 100
     assert exp_config.pipeline.top_k == 3
     assert exp_config.dataset.max_samples == 5
-    
+
     # Check defaults handled properly where missing
     assert exp_config.evaluator.k_values == [1, 3, 5, 10]
     assert exp_config.chunker.chunk_size == 512

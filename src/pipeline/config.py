@@ -10,17 +10,17 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class RAGPipelineConfig:
     """Configuration for RAG Pipeline execution.
-    
+
     Attributes:
         top_k: Number of documents to retrieve.
         evaluate_retrieval: Whether to execute the retrieval evaluator logic.
         evaluate_generation: Whether to execute generation evaluator logic (future use).
     """
-    
+
     top_k: int = field(default=5)
     evaluate_retrieval: bool = field(default=True)
     evaluate_generation: bool = field(default=False)
-    
+
     def __post_init__(self) -> None:
         """Validate pipeline configuration limits."""
         if self.top_k <= 0:

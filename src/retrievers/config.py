@@ -7,17 +7,16 @@ and loadable from configuration files.
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass(frozen=True)
 class PineconeRetrieverConfig:
     """Configuration for PineconeRetriever.
-    
+
     This configuration encapsulates all settings needed to initialize
     and operate a Pinecone retriever. API keys can be provided directly
     or read from environment variables for security.
-    
+
     Attributes:
         api_key: Pinecone API key. If not provided, will attempt to read
             from PINECONE_API_KEY environment variable.
@@ -33,15 +32,15 @@ class PineconeRetrieverConfig:
         timeout: Optional timeout in seconds for API requests. Defaults to None
             (uses Pinecone client default).
     """
-    
+
     index_name: str
     dimension: int
-    api_key: Optional[str] = field(default=None)
-    environment: Optional[str] = field(default=None)
+    api_key: str | None = field(default=None)
+    environment: str | None = field(default=None)
     metric: str = field(default="cosine")
-    namespace: Optional[str] = field(default=None)
-    timeout: Optional[float] = field(default=None)
-    
+    namespace: str | None = field(default=None)
+    timeout: float | None = field(default=None)
+
     def __post_init__(self) -> None:
         """Validate configuration and resolve API key from environment if needed."""
         # Validate metric
@@ -50,11 +49,11 @@ class PineconeRetrieverConfig:
             raise ValueError(
                 f"metric must be one of {valid_metrics}, got '{self.metric}'"
             )
-        
+
         # Validate dimension
         if self.dimension <= 0:
             raise ValueError(f"dimension must be positive, got {self.dimension}")
-        
+
         # Resolve API key from environment if not provided
         if self.api_key is None:
             api_key = os.getenv("PINECONE_API_KEY")
@@ -70,24 +69,24 @@ class PineconeRetrieverConfig:
 @dataclass(frozen=True)
 class ChromaRetrieverConfig:
     """Configuration for ChromaRetriever.
-    
+
     Attributes:
         collection_name: Name of the ChromaDB collection to use.
         persist_directory: Optional directory path to persist database. If None,
             runs completely in-memory.
         distance_metric: Default is 'cosine' for most modern embeddings.
     """
-    
+
     collection_name: str = field(default="squad_benchmark")
-    persist_directory: Optional[str] = field(default=None)
+    persist_directory: str | None = field(default=None)
     distance_metric: str = field(default="cosine")
-    
+
     def __post_init__(self) -> None:
         """Validate configuration parameters."""
         valid_metrics = {"cosine", "l2", "ip"}
         if self.distance_metric not in valid_metrics:
             raise ValueError(f"distance_metric must be one of {valid_metrics}, got '{self.distance_metric}'")
-        
+
         if not self.collection_name:
             raise ValueError("collection_name cannot be empty")
 
@@ -107,7 +106,7 @@ class QdrantRetrieverConfig:
     collection_name: str = field(default="rag_benchmark")
     distance_metric: str = field(default="cosine")
     in_memory: bool = field(default=True)
-    persist_path: Optional[str] = field(default=None)
+    persist_path: str | None = field(default=None)
 
     def __post_init__(self) -> None:
         """Validate configuration parameters."""

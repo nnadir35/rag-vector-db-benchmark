@@ -8,7 +8,7 @@ import os
 import sys
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 # Add project root to PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 REPORT_METRIC_KEYS = ("mrr", "precision@1", "recall@3")
 
 
-def _mean_metrics(rows: List[Dict[str, float]]) -> Dict[str, float]:
+def _mean_metrics(rows: list[dict[str, float]]) -> dict[str, float]:
     """Average each metric key across per-query rows."""
     if not rows:
         return {}
@@ -40,14 +40,14 @@ def _mean_metrics(rows: List[Dict[str, float]]) -> Dict[str, float]:
 
 def _run_retriever_eval(
     retriever: Retriever,
-    queries: List[Query],
-    ground_truth: Dict[str, Set[str]],
+    queries: list[Query],
+    ground_truth: dict[str, set[str]],
     evaluator: RetrievalEvaluator,
     top_k: int,
-) -> Tuple[Dict[str, float], float, List[Dict[str, float]]]:
+) -> tuple[dict[str, float], float, list[dict[str, float]]]:
     """Evaluate one retriever; return mean metrics, mean latency, per-query metrics."""
-    per_query_metrics: List[Dict[str, float]] = []
-    latencies: List[float] = []
+    per_query_metrics: list[dict[str, float]] = []
+    latencies: list[float] = []
 
     for q in queries:
         t0 = time.perf_counter()
@@ -113,7 +113,7 @@ def main() -> None:
     chroma_config = ChromaRetrieverConfig(**chroma_dict)
     qdrant_config = QdrantRetrieverConfig(**qdrant_dict)
 
-    results_summary: Dict[str, Any] = {
+    results_summary: dict[str, Any] = {
         "experiment_name": exp_config.name,
         "config_path": config_path,
         "num_queries": len(queries),

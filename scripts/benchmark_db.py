@@ -15,9 +15,10 @@ import os
 import sys
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Set, Tuple, TypeVar
+from typing import Any, TypeVar
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -64,8 +65,8 @@ class ResourceSampler:
         self._interval = max(0.02, float(interval_seconds))
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
-        self._rss_bytes: List[int] = []
-        self._cpu_samples: List[float] = []
+        self._rss_bytes: list[int] = []
+        self._cpu_samples: list[float] = []
 
     def start(self) -> None:
         self._rss_bytes.clear()
@@ -109,7 +110,7 @@ class ResourceSampler:
         return ResourceStats(peak_memory_mb=peak_mb, avg_cpu_percent=avg_cpu)
 
 
-def run_with_resource_stats(work: Callable[[], T], sampler_interval: float = 0.05) -> Tuple[T, ResourceStats]:
+def run_with_resource_stats(work: Callable[[], T], sampler_interval: float = 0.05) -> tuple[T, ResourceStats]:
     """Run ``work`` while sampling memory/CPU in a background thread."""
     sampler = ResourceSampler(interval_seconds=sampler_interval)
     sampler.start()
@@ -123,7 +124,7 @@ def run_with_resource_stats(work: Callable[[], T], sampler_interval: float = 0.0
 def load_squad_corpus(
     num_documents: int,
     version: str,
-) -> Tuple[List[Document], List[Query], Dict[str, Set[str]], List[str]]:
+) -> tuple[list[Document], list[Query], dict[str, set[str]], list[str]]:
     """Load up to ``num_documents`` unique SQuAD contexts (validation first, then train)."""
     if num_documents <= 0:
         raise ValueError(f"num_documents must be positive, got {num_documents}")
@@ -135,7 +136,7 @@ def load_squad_corpus(
     val_queries, val_gt = val_loader.load()
     val_docs = val_loader.load_documents()
 
-    splits_used: List[str] = ["validation"]
+    splits_used: list[str] = ["validation"]
 
     if len(val_docs) >= num_documents:
         documents = val_docs[:num_documents]
@@ -152,8 +153,8 @@ def load_squad_corpus(
     train_queries, train_gt = train_loader.load()
     train_docs = train_loader.load_documents()
 
-    merged: List[Document] = list(val_docs)
-    seen: Set[str] = {d.id for d in merged}
+    merged: list[Document] = list(val_docs)
+    seen: set[str] = {d.id for d in merged}
     for doc in train_docs:
         if len(merged) >= num_documents:
             break
@@ -170,24 +171,24 @@ def load_squad_corpus(
     documents = merged[:num_documents]
     splits_used.append("train")
 
-    combined_gt: Dict[str, Set[str]] = {**val_gt, **train_gt}
+    combined_gt: dict[str, set[str]] = {**val_gt, **train_gt}
     combined_queries = val_queries + train_queries
 
     return documents, combined_queries, combined_gt, splits_used
 
 
-def _mean(values: List[float]) -> float:
+def _mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
 def _select_queries_for_documents(
-    queries: List[Query],
-    ground_truth: Dict[str, Set[str]],
-    doc_ids: Set[str],
+    queries: list[Query],
+    ground_truth: dict[str, set[str]],
+    doc_ids: set[str],
     num_queries: int,
-) -> List[Query]:
+) -> list[Query]:
     """Pick queries whose ground-truth context document is in ``doc_ids``."""
-    selected: List[Query] = []
+    selected: list[Query] = []
     for q in queries:
         if len(selected) >= num_queries:
             break
@@ -199,7 +200,7 @@ def _select_queries_for_documents(
     return selected
 
 
-def _mean_metrics(rows: List[Dict[str, float]]) -> Dict[str, float]:
+def _mean_metrics(rows: list[dict[str, float]]) -> dict[str, float]:
     if not rows:
         return {}
     keys = rows[0].keys()
@@ -231,10 +232,10 @@ def run_benchmark(
     embedder_cfg: SentenceTransformersEmbedderConfig,
     chroma_cfg: ChromaRetrieverConfig,
     qdrant_cfg: QdrantRetrieverConfig,
-    k_values: List[int],
+    k_values: list[int],
     squad_version: str,
     show_progress: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Execute indexing and retrieval benchmarks; return a JSON-serializable report."""
     if top_k not in k_values:
         k_values = sorted({*k_values, top_k})
@@ -261,7 +262,7 @@ def run_benchmark(
 
     logging.info("Chunking %s documents...", len(documents))
     chunker = FixedSizeChunker(chunker_cfg)
-    chunks: List[Chunk] = []
+    chunks: list[Chunk] = []
     doc_iter = tqdm(
         documents,
         desc="Chunking documents",
@@ -275,7 +276,7 @@ def run_benchmark(
 
     logging.info("Embedding %s chunks (single pass, shared by both DBs)...", len(chunks))
     t0 = time.perf_counter()
-    embeddings: List[Embedding] = embedder.embed_chunks(chunks)
+    embeddings: list[Embedding] = embedder.embed_chunks(chunks)
     embedding_seconds = time.perf_counter() - t0
 
     # --- Chroma: persist + resource stats ---
@@ -290,8 +291,8 @@ def run_benchmark(
     chroma_add_seconds = time.perf_counter() - t_idx0
 
     # --- Retrieval + accuracy (Chroma) ---
-    chroma_latencies_ms: List[float] = []
-    chroma_rows: List[Dict[str, float]] = []
+    chroma_latencies_ms: list[float] = []
+    chroma_rows: list[dict[str, float]] = []
 
     def _chroma_retrieval_pass() -> None:
         for q in tqdm(
@@ -323,8 +324,8 @@ def run_benchmark(
     _, qdrant_index_stats = run_with_resource_stats(_qdrant_index)
     qdrant_add_seconds = time.perf_counter() - t_qidx0
 
-    qdrant_latencies_ms: List[float] = []
-    qdrant_rows: List[Dict[str, float]] = []
+    qdrant_latencies_ms: list[float] = []
+    qdrant_rows: list[dict[str, float]] = []
 
     def _qdrant_retrieval_pass() -> None:
         for q in tqdm(
@@ -395,7 +396,7 @@ def run_benchmark(
     }
 
 
-def _print_table(report: Dict[str, Any]) -> None:
+def _print_table(report: dict[str, Any]) -> None:
     ck = report["recall_at_k_metric"]
     ch = report["chroma"]
     qd = report["qdrant"]

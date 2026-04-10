@@ -8,7 +8,8 @@ import json
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from qdrant_client import QdrantClient
@@ -21,8 +22,8 @@ from ..core.types import (
     Chunk,
     Embedding,
     Query,
-    RetrievedChunk,
     RetrievalResult,
+    RetrievedChunk,
 )
 from .config import QdrantRetrieverConfig
 
@@ -44,7 +45,7 @@ class QdrantRetriever(Retriever):
         self._config = config
         self._embedder = embedder
 
-        self._client: Optional[Any] = None
+        self._client: Any | None = None
         self._collection_ready: bool = False
 
     def _ensure_qdrant_imported(self) -> None:
@@ -145,7 +146,7 @@ class QdrantRetriever(Retriever):
 
         self._collection_ready = True
 
-    def _chunk_metadata_to_payload(self, chunk: Chunk) -> Dict[str, Any]:
+    def _chunk_metadata_to_payload(self, chunk: Chunk) -> dict[str, Any]:
         """Convert Chunk metadata to Qdrant payload fields."""
         payload: dict[str, Any] = {
             "chunk_id": chunk.id,
@@ -166,11 +167,11 @@ class QdrantRetriever(Retriever):
                     pass
         return payload
 
-    def _payload_to_chunk(self, payload: Dict[str, Any]) -> Chunk:
+    def _payload_to_chunk(self, payload: dict[str, Any]) -> Chunk:
         """Reconstruct Chunk from Qdrant payload."""
         from ..core.types import ChunkMetadata
 
-        custom_metadata: Dict[str, Any] = {}
+        custom_metadata: dict[str, Any] = {}
         for key, value in payload.items():
             if key.startswith("custom_"):
                 custom_key = key[7:]
@@ -231,7 +232,7 @@ class QdrantRetriever(Retriever):
 
             client = self._get_client()
             points: list[Any] = []
-            for chunk, emb in zip(chunks, embeddings):
+            for chunk, emb in zip(chunks, embeddings, strict=False):
                 payload = self._chunk_metadata_to_payload(chunk)
                 points.append(
                     PointStruct(
@@ -276,7 +277,7 @@ class QdrantRetriever(Retriever):
         self,
         query_embedding: Embedding,
         top_k: int = 10,
-        query_id: Optional[str] = None,
+        query_id: str | None = None,
     ) -> RetrievalResult:
         """Retrieve relevant chunks using a pre-computed query embedding."""
         try:
