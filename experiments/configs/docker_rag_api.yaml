@@ -1,0 +1,44 @@
+# Docker Compose: Qdrant runs in ``qdrant-server``; this file uses remote Qdrant via
+# QDRANT_HOST / QDRANT_PORT (set in docker-compose.yml). Ollama is expected on the host
+# (see generator.api_base).
+
+experiment:
+  name: "docker_rag_api"
+
+dataset:
+  split: "validation"
+  max_samples: 100
+  version: "squad_v2"
+
+chunker:
+  chunk_size: 512
+  overlap: 50
+
+embedder:
+  model_name: "all-MiniLM-L6-v2"
+  device: "cpu"
+  batch_size: 32
+  normalize_embeddings: true
+
+generator:
+  model_name: "ollama/llama3:8b"
+  temperature: 0.0
+  max_tokens: 512
+  api_base: "http://host.docker.internal:11434"
+  system_prompt: "Answer based only on the provided context. Be highly concise."
+
+evaluator:
+  k_values: [1, 2, 3]
+
+pipeline:
+  top_k: 3
+  evaluate_retrieval: false
+  evaluate_generation: false
+
+retriever:
+  type: qdrant
+  # Yerelde: gömülü :memory: Qdrant. Docker Compose’ta QDRANT_HOST=qdrant-server ile
+  # qdrant_retriever uzak sunucuya bağlanır (ortam değişkeni önceliklidir).
+  in_memory: true
+  collection_name: "rag_api_docker"
+  distance_metric: "cosine"

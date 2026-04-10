@@ -5,6 +5,7 @@ that uses Qdrant as the vector database backend.
 """
 
 import json
+import os
 import time
 import uuid
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
@@ -61,17 +62,37 @@ class QdrantRetriever(Retriever):
                 ) from None
 
     def _get_client(self) -> "QdrantClient":
-        """Get or create Qdrant client."""
+        """Get or create Qdrant client.
+
+        Connection resolution order (first match wins):
+
+        1. ``QDRANT_URL`` — full URL (e.g. ``http://qdrant-server:6333``).
+        2. ``QDRANT_HOST`` (optional ``QDRANT_PORT``, default ``6333``) — HTTP URL built
+           for the official Qdrant server container.
+        3. ``in_memory`` in config — embedded ``:memory:`` instance.
+        4. Local persistence — ``persist_path`` on disk.
+
+        Environment variables allow deployment (Docker Compose, k8s) without hardcoding
+        hosts in application code.
+        """
         self._ensure_qdrant_imported()
 
         if self._client is None:
             try:
-                if self._config.in_memory:
+                url = os.getenv("QDRANT_URL", "").strip()
+                host = os.getenv("QDRANT_HOST", "").strip()
+                if url:
+                    self._client = QdrantClient(url=url)
+                elif host:
+                    port = int(os.getenv("QDRANT_PORT", "6333"))
+                    self._client = QdrantClient(url=f"http://{host}:{port}")
+                elif self._config.in_memory:
                     self._client = QdrantClient(":memory:")
                 else:
                     if self._config.persist_path is None:
                         raise RuntimeError(
-                            "persist_path must be set when in_memory is False"
+                            "persist_path must be set when in_memory is False "
+                            "and QDRANT_URL/QDRANT_HOST are not set"
                         )
                     self._client = QdrantClient(path=self._config.persist_path)
             except Exception as e:

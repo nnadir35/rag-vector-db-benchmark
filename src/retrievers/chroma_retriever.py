@@ -5,6 +5,7 @@ that uses ChromaDB as the vector database backend.
 """
 
 import json
+import os
 import time
 from typing import TYPE_CHECKING, Any, Optional, Sequence
 
@@ -56,28 +57,80 @@ class ChromaRetriever(Retriever):
                     "chromadb package is required for ChromaRetriever. "
                     "Install it with: pip install chromadb"
                 )
-                
+
+    def _create_chroma_client(self) -> Any:
+        """Build a Chroma client (hybrid: remote server vs local persistence).
+
+        * If ``CHROMA_HOST`` is set (non-empty): ``HttpClient`` to a Chroma server on the
+          Docker network or elsewhere. Port from ``CHROMA_PORT``, default ``8000``.
+        * Otherwise: same as before — ``PersistentClient`` when a persist path is set
+          (config or ``CHROMA_PERSIST_DIRECTORY``), else ``EphemeralClient`` for tests/dev.
+
+        Works in Docker (set ``CHROMA_HOST``) and locally (omit it and use a persist path).
+        """
+        self._ensure_chroma_imported()
+
+        raw_host = os.getenv("CHROMA_HOST")
+        host = raw_host.strip() if isinstance(raw_host, str) else ""
+        if host:
+            port_raw = os.getenv("CHROMA_PORT", "8000")
+            try:
+                port = int(port_raw)
+            except ValueError as exc:
+                raise ValueError(
+                    f"CHROMA_PORT must be an integer, got {port_raw!r}"
+                ) from exc
+            if port <= 0 or port > 65535:
+                raise ValueError(f"CHROMA_PORT out of range: {port}")
+            try:
+                return chromadb.HttpClient(host=host, port=port)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Could not reach Chroma server at http://{host}:{port}. "
+                    f"Check CHROMA_HOST/CHROMA_PORT, network, and that the Chroma "
+                    f"container is running. Underlying error: {exc}"
+                ) from exc
+
+        persist_env = os.getenv("CHROMA_PERSIST_DIRECTORY")
+        if persist_env is not None and persist_env.strip() != "":
+            persist_path: Optional[str] = persist_env.strip()
+        else:
+            persist_path = self._config.persist_directory
+
+        if persist_path:
+            try:
+                return chromadb.PersistentClient(path=persist_path)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Could not open Chroma persistent store at {persist_path!r}. "
+                    f"Ensure the path exists and is writable. Underlying error: {exc}"
+                ) from exc
+
+        try:
+            return chromadb.EphemeralClient()
+        except Exception as exc:
+            raise RuntimeError(
+                f"Could not create Chroma in-memory (ephemeral) client: {exc}"
+            ) from exc
+
     @property
     def _chroma_collection(self) -> "chromadb.Collection":
         """Get or create Chroma collection."""
         self._ensure_chroma_imported()
         
         if self._collection is None:
+            self._client = self._create_chroma_client()
             try:
-                if self._config.persist_directory:
-                    self._client = chromadb.PersistentClient(path=self._config.persist_directory)
-                else:
-                    self._client = chromadb.EphemeralClient()
-                    
                 self._collection = self._client.get_or_create_collection(
                     name=self._config.collection_name,
                     metadata={"hnsw:space": self._config.distance_metric}
                 )
-            except Exception as e:
+            except Exception as exc:
                 raise RuntimeError(
-                    f"Failed to connect to ChromaDB collection: {e}"
-                ) from e
-                
+                    f"Failed to get or create Chroma collection "
+                    f"{self._config.collection_name!r}: {exc}"
+                ) from exc
+
         return self._collection
 
     def _chunk_metadata_to_dict(self, chunk: Chunk) -> dict:

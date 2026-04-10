@@ -122,6 +122,10 @@ class QdrantRetrieverConfig:
             raise ValueError("collection_name cannot be empty")
 
         if not self.in_memory and self.persist_path is None:
-            raise ValueError(
-                "persist_path must be provided when in_memory is False"
-            )
+            # Remote Qdrant (Docker / k8s) uses QDRANT_URL or QDRANT_HOST from the environment
+            # instead of a local persist_path.
+            if not (os.getenv("QDRANT_URL") or os.getenv("QDRANT_HOST")):
+                raise ValueError(
+                    "persist_path must be provided when in_memory is False "
+                    "unless QDRANT_URL or QDRANT_HOST is set for remote mode"
+                )
