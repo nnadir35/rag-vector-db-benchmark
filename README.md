@@ -1,6 +1,6 @@
 # RAG Vector DB Benchmark
 
-[![Python CI](https://github.com/YOUR_USERNAME/rag-vector-db-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/rag-vector-db-benchmark/actions/workflows/ci.yml)
+[![Python CI](https://github.com/nnadir35/rag-vector-db-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/nnadir35/rag-vector-db-benchmark/actions/workflows/ci.yml)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
 [![Strict Type Checking](https://img.shields.io/badge/mypy-strict-green)](http://mypy-lang.org/)
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
