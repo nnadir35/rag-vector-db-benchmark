@@ -19,3 +19,20 @@ htmlcov/
 
 # Notebooks
 .ipynb_checkpoints/
+
+# Local Database / Vector Store Persist Files & Folders
+*.db
+*.db/
+*.index
+*.meta
+*.pkl
+chroma_db/
+qdrant_db/
+qdrant_storage/
+
+# IDEs and Editors
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
