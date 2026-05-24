@@ -155,3 +155,30 @@ class FAISSRetrieverConfig:
         if not self.collection_name:
             raise ValueError("collection_name cannot be empty")
 
+
+@dataclass(frozen=True)
+class MilvusRetrieverConfig:
+    """Configuration for MilvusRetriever.
+
+    Attributes:
+        collection_name: Milvus collection adı.
+        distance_metric: 'cosine', 'l2', 'ip'. Milvus metric_type'a map'lenir:
+                         cosine → COSINE, l2 → L2, ip → IP
+        in_memory: True ise MilvusClient(":memory:") (Milvus Lite) kullanır.
+                   Docker/remote için False yap, MILVUS_HOST/MILVUS_PORT set et.
+        connection_alias: pymilvus connections için alias (default: "default").
+    """
+    collection_name: str = field(default="milvus_benchmark")
+    distance_metric: str = field(default="cosine")
+    in_memory: bool = field(default=True)
+    connection_alias: str = field(default="default")
+
+    def __post_init__(self) -> None:
+        valid = {"cosine", "l2", "ip"}
+        if self.distance_metric not in valid:
+            raise ValueError(
+                f"distance_metric must be one of {valid}, got '{self.distance_metric}'"
+            )
+        if not self.collection_name:
+            raise ValueError("collection_name cannot be empty")
+

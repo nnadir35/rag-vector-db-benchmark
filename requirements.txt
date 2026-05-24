@@ -12,6 +12,9 @@ litellm>=1.30.0
 # Vector stores
 chromadb>=0.4.0
 qdrant-client>=1.7.0
+pymilvus>=2.3.0
+faiss-cpu>=1.7.4
+numpy>=1.24.0
 pinecone-client>=3.0.0
 
 # API & UI (optional but needed for api.py / app_gui.py)

@@ -42,7 +42,12 @@ def build_retriever_from_yaml(raw_config: dict[str, Any], embedder: Embedder) ->
         from .faiss_retriever import FAISSRetriever
 
         return FAISSRetriever(FAISSRetrieverConfig(**kwargs), embedder)
+    if rtype == "milvus":
+        from .config import MilvusRetrieverConfig
+        from .milvus_retriever import MilvusRetriever
+
+        return MilvusRetriever(MilvusRetrieverConfig(**kwargs), embedder)
     raise ValueError(
-        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss."
+        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss, milvus."
     )
 
