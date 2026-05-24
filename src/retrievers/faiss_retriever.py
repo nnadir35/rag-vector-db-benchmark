@@ -30,11 +30,7 @@ from .config import FAISSRetrieverConfig
 
 
 class FAISSRetriever(Retriever):
-    """FAISS-based retriever implementation.
-
-    This retriever stores chunks and their embeddings in a FAISS index
-    and performs similarity search to retrieve relevant chunks for queries.
-    """
+    """FAISS-based retriever implementation."""
 
     def __init__(
         self,
@@ -44,16 +40,14 @@ class FAISSRetriever(Retriever):
         """Initialize FAISS retriever.
 
         Args:
-            config: Configuration for FAISS usage
+            config: Configuration for FAISS connection and settings
             embedder: Embedder instance to use for query embedding
         """
         self._config = config
         self._embedder = embedder
 
         self._index: Any | None = None
-        self._metadata: dict[int, Chunk] = {}
-        self._id_to_int: dict[str, int] = {}
-        self._int_to_id: dict[int, str] = {}
+        self._id_to_chunk: dict[int, Chunk] = {}
         self._next_id: int = 0
 
     def _ensure_faiss_imported(self) -> None:
@@ -69,53 +63,46 @@ class FAISSRetriever(Retriever):
                 faiss = _faiss
             except ImportError:
                 raise ImportError(
-                    "faiss package is required for FAISSRetriever. "
+                    "faiss-cpu package is required for FAISSRetriever. "
                     "Install it with: pip install faiss-cpu"
                 ) from None
 
-    def _ensure_initialized(self, dimension: int) -> None:
-        """Ensure the FAISS index is initialized and loaded from disk if persisted.
+    def _get_or_create_index(self, vector_size: int) -> Any:
+        """Get the existing FAISS index or create a new one.
 
         Args:
-            dimension: Dimension of the vector space
+            vector_size: Dimension of the vector space
 
-        Raises:
-            RuntimeError: If loading from disk fails
-            ValueError: If the distance metric is unsupported
+        Returns:
+            The FAISS index instance
         """
         self._ensure_faiss_imported()
-        if self._index is not None:
-            return
+        if self._index is None:
+            if self._config.persist_path:
+                self._load_from_disk()
 
-        # Check if persist files exist
-        if self._config.persist_path:
-            index_path = f"{self._config.persist_path}.index"
-            pkl_path = f"{self._config.persist_path}.pkl"
-            if os.path.exists(index_path) and os.path.exists(pkl_path):
-                try:
-                    self._index = faiss.read_index(index_path)
-                    import pickle
-                    with open(pkl_path, "rb") as f:
-                        data = pickle.load(f)
-                        self._metadata = data.get("metadata", {})
-                        self._id_to_int = data.get("id_to_int", {})
-                        self._int_to_id = data.get("int_to_id", {})
-                        self._next_id = data.get("next_id", 0)
-                    return
-                except Exception as e:
-                    raise RuntimeError(
-                        f"Failed to load FAISS index from persist path: {e}"
-                    ) from e
+        if self._index is None:
+            metric = self._config.distance_metric
+            if metric == "l2":
+                self._index = faiss.IndexFlatL2(vector_size)
+            else:  # cosine veya ip
+                self._index = faiss.IndexFlatIP(vector_size)
 
-        # Create new index
-        metric = self._config.distance_metric
-        if metric in ("cosine", "ip"):
-            sub_index = faiss.IndexFlatIP(dimension)
-        elif metric == "l2":
-            sub_index = faiss.IndexFlatL2(dimension)
-        else:
-            raise ValueError(f"Unsupported distance metric: {metric}")
-        self._index = faiss.IndexIDMap(sub_index)
+        return self._index
+
+    def _normalize_if_cosine(self, vectors: np.ndarray) -> np.ndarray:
+        """Normalize vectors if distance metric is cosine.
+
+        Args:
+            vectors: Numpy array of vectors
+
+        Returns:
+            Normalized or unchanged numpy array of vectors
+        """
+        if self._config.distance_metric == "cosine":
+            self._ensure_faiss_imported()
+            faiss.normalize_L2(vectors)
+        return vectors
 
     def add_chunks(
         self,
@@ -144,55 +131,66 @@ class FAISSRetriever(Retriever):
 
         try:
             first_dim = embeddings[0].dimension
-            self._ensure_initialized(dimension=first_dim)
-
-            vecs_list = []
-            for i, emb in enumerate(embeddings):
+            for emb in embeddings:
                 if emb.dimension != first_dim:
                     raise ValueError(
                         "All embeddings must share the same dimension for FAISS indexing"
                     )
-                vecs_list.append(emb.vector)
 
-            vecs = np.array(vecs_list, dtype=np.float32)
+            vecs = np.array([e.vector for e in embeddings], dtype=np.float32)
+            vecs = self._normalize_if_cosine(vecs)
 
-            if self._config.distance_metric == "cosine":
-                norms = np.linalg.norm(vecs, axis=1, keepdims=True)
-                norms = np.where(norms == 0, 1.0, norms)
-                vecs = vecs / norms
+            index = self._get_or_create_index(first_dim)
+            index.add(vecs)
 
-            ids = []
-            for chunk in chunks:
-                if chunk.id not in self._id_to_int:
-                    self._id_to_int[chunk.id] = self._next_id
-                    self._int_to_id[self._next_id] = chunk.id
-                    self._next_id += 1
-                int_id = self._id_to_int[chunk.id]
-                self._metadata[int_id] = chunk
-                ids.append(int_id)
+            for i, chunk in enumerate(chunks):
+                self._id_to_chunk[self._next_id + i] = chunk
 
-            ids_arr = np.array(ids, dtype=np.int64)
+            self._next_id += len(chunks)
 
-            self._index.add_with_ids(vecs, ids_arr)
-
-            # Persist to disk if persist_path is set
             if self._config.persist_path:
-                dir_name = os.path.dirname(self._config.persist_path)
-                if dir_name:
-                    os.makedirs(dir_name, exist_ok=True)
-                faiss.write_index(self._index, f"{self._config.persist_path}.index")
-                import pickle
-                data = {
-                    "metadata": self._metadata,
-                    "id_to_int": self._id_to_int,
-                    "int_to_id": self._int_to_id,
-                    "next_id": self._next_id,
-                }
-                with open(f"{self._config.persist_path}.pkl", "wb") as f:
-                    pickle.dump(data, f)
+                self._save_to_disk()
 
         except Exception as e:
             raise RuntimeError(f"Failed to add chunks to FAISS: {e}") from e
+
+    def _save_to_disk(self) -> None:
+        """Save FAISS index and metadata to disk."""
+        self._ensure_faiss_imported()
+        if not self._config.persist_path:
+            return
+
+        try:
+            dir_name = os.path.dirname(self._config.persist_path)
+            if dir_name:
+                os.makedirs(dir_name, exist_ok=True)
+
+            faiss.write_index(self._index, self._config.persist_path + ".index")
+
+            import pickle
+            with open(self._config.persist_path + ".meta", "wb") as f:
+                pickle.dump(self._id_to_chunk, f)
+        except Exception as e:
+            raise RuntimeError(f"Failed to save FAISS index to disk: {e}") from e
+
+    def _load_from_disk(self) -> None:
+        """Load FAISS index and metadata from disk."""
+        self._ensure_faiss_imported()
+        if not self._config.persist_path:
+            return
+
+        index_path = self._config.persist_path + ".index"
+        meta_path = self._config.persist_path + ".meta"
+
+        if os.path.exists(index_path) and os.path.exists(meta_path):
+            try:
+                self._index = faiss.read_index(index_path)
+                import pickle
+                with open(meta_path, "rb") as f:
+                    self._id_to_chunk = pickle.load(f)
+                self._next_id = len(self._id_to_chunk)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load FAISS index from disk: {e}") from e
 
     def retrieve(self, query: Query, top_k: int = 10) -> RetrievalResult:
         """Retrieve relevant chunks for a query.
@@ -249,42 +247,33 @@ class FAISSRetriever(Retriever):
                 f"embedder dimension ({self._embedder.get_dimension()})"
             )
 
+        if self._index is None and self._config.persist_path:
+            self._load_from_disk()
+
+        if self._index is None or self._index.ntotal == 0:
+            raise RuntimeError(
+                "Cannot retrieve from FAISS: index is empty. Call add_chunks first."
+            )
+
         try:
-            self._ensure_initialized(dimension=query_embedding.dimension)
-
-            if self._index.ntotal == 0:
-                query = Query(id=query_id or "unknown", text="")
-                return RetrievalResult(
-                    query=query,
-                    chunks=[],
-                    metadata={
-                        "retrieval_latency_seconds": 0.0,
-                        "num_results": 0,
-                        "collection_name": self._config.collection_name,
-                    },
-                )
-
-            query_vec = np.array([query_embedding.vector], dtype=np.float32)
-
-            if self._config.distance_metric == "cosine":
-                norm = np.linalg.norm(query_vec)
-                if norm > 0:
-                    query_vec = query_vec / norm
+            query_vector = np.array([query_embedding.vector], dtype=np.float32)
+            query_vector = self._normalize_if_cosine(query_vector)
 
             start_time = time.time()
-            distances, ids = self._index.search(query_vec, top_k)
+            distances, indices = self._index.search(query_vector, top_k)
             retrieval_time = time.time() - start_time
 
             retrieved_chunks = []
-            for rank, (dist, idx) in enumerate(zip(distances[0], ids[0], strict=False)):
+            for rank in range(len(indices[0])):
+                idx = indices[0][rank]
                 if idx == -1:
                     continue
 
-                chunk = self._metadata.get(idx)
+                chunk = self._id_to_chunk.get(idx)
                 if chunk is None:
                     continue
 
-                score = float(dist)
+                score = float(distances[0][rank])
                 if self._config.distance_metric == "l2":
                     score = -score
 
@@ -302,6 +291,7 @@ class FAISSRetriever(Retriever):
                 "retrieval_latency_seconds": retrieval_time,
                 "num_results": len(retrieved_chunks),
                 "collection_name": self._config.collection_name,
+                "index_total_vectors": self._index.ntotal,
             }
 
             return RetrievalResult(
@@ -318,17 +308,15 @@ class FAISSRetriever(Retriever):
         try:
             self._ensure_faiss_imported()
             self._index = None
-            self._metadata.clear()
-            self._id_to_int.clear()
-            self._int_to_id.clear()
+            self._id_to_chunk = {}
             self._next_id = 0
 
             if self._config.persist_path:
-                index_path = f"{self._config.persist_path}.index"
-                pkl_path = f"{self._config.persist_path}.pkl"
+                index_path = self._config.persist_path + ".index"
+                meta_path = self._config.persist_path + ".meta"
                 if os.path.exists(index_path):
                     os.remove(index_path)
-                if os.path.exists(pkl_path):
-                    os.remove(pkl_path)
+                if os.path.exists(meta_path):
+                    os.remove(meta_path)
         except Exception as e:
             raise RuntimeError(f"Failed to clear FAISS index: {e}") from e
