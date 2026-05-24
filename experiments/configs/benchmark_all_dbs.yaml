@@ -1,0 +1,39 @@
+experiment:
+  name: "benchmark_all_dbs_squad"
+
+dataset:
+  split: "validation"
+  max_samples: 1000
+  version: "squad_v2"
+
+chunker:
+  chunk_size: 512
+  overlap: 50
+
+embedder:
+  model_name: "all-MiniLM-L6-v2"
+  device: "cpu"
+  batch_size: 32
+  normalize_embeddings: true
+
+evaluator:
+  k_values: [1, 3, 5, 10]
+
+pipeline:
+  top_k: 10
+
+chroma_retriever:
+  collection_name: "bench_chroma_squad"
+
+qdrant_retriever:
+  collection_name: "bench_qdrant_squad"
+  in_memory: true
+
+faiss_retriever:
+  collection_name: "bench_faiss_squad"
+  distance_metric: "cosine"
+
+milvus_retriever:
+  collection_name: "bench_milvus_squad"
+  distance_metric: "cosine"
+  in_memory: true

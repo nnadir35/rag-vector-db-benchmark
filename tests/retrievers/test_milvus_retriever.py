@@ -44,11 +44,11 @@ class MockMilvusClient:
                 datatype: Any,
                 is_primary: bool = False,
                 max_length: int | None = None,
-                dimension: int | None = None,
+                dim: int | None = None,
             ) -> None:
                 params = {}
-                if dimension is not None:
-                    params["dim"] = dimension
+                if dim is not None:
+                    params["dim"] = dim
                 self.fields.append({
                     "name": field_name,
                     "type": datatype,
@@ -272,11 +272,11 @@ def test_config_rejects_invalid_distance_metric() -> None:
 
 
 def test_in_memory_client_uses_memory_uri() -> None:
-    """Test that in_memory config matches :memory: URI and remote uses env."""
+    """Test that in_memory config matches local file URI and remote uses env."""
     config_mem = MilvusRetrieverConfig(in_memory=True)
     retriever_mem = MilvusRetriever(config_mem, DummyEmbedder())
     client_mem = retriever_mem._get_client()
-    assert client_mem.uri == ":memory:"
+    assert client_mem.uri == f"{config_mem.collection_name}.db"
 
     config_remote = MilvusRetrieverConfig(in_memory=False)
     retriever_remote = MilvusRetriever(config_remote, DummyEmbedder())

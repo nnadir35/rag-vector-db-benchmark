@@ -81,7 +81,8 @@ class MilvusRetriever(Retriever):
         if self._client is None:
             try:
                 if self._config.in_memory:
-                    self._client = MilvusClient(":memory:")
+                    # pymilvus 3.x requires a local file ending with .db for embedded mode
+                    self._client = MilvusClient(f"{self._config.collection_name}.db")
                 else:
                     host = os.getenv("MILVUS_HOST", "localhost").strip()
                     port = int(os.getenv("MILVUS_PORT", "19530"))
@@ -136,7 +137,7 @@ class MilvusRetriever(Retriever):
             schema.add_field(field_name="chunk_index", datatype=DataType.INT64)
             schema.add_field(field_name="start_char", datatype=DataType.INT64)
             schema.add_field(field_name="end_char", datatype=DataType.INT64)
-            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dimension=vector_size)
+            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=vector_size)
 
             index_params = client.prepare_index_params()
             index_params.add_index(
@@ -341,5 +342,17 @@ class MilvusRetriever(Retriever):
                     client.drop_collection(self._config.collection_name)
             self._collection_ready = False
             self._next_id = 0
+            # Also clean up the local db file if running in memory mode
+            if self._config.in_memory:
+                db_path = f"{self._config.collection_name}.db"
+                if os.path.exists(db_path):
+                    try:
+                        if os.path.isdir(db_path):
+                            import shutil
+                            shutil.rmtree(db_path)
+                        else:
+                            os.remove(db_path)
+                    except OSError:
+                        pass
         except Exception as e:
             raise RuntimeError(f"Failed to clear Milvus: {e}") from e

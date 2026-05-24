@@ -1,0 +1,104 @@
+{
+  "collection_name": "bench_milvus_squad",
+  "enable_dynamic_field": true,
+  "fields": [
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "int64",
+      "element_type": null,
+      "is_primary": true,
+      "max_capacity": null,
+      "max_length": null,
+      "name": "id",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "varchar",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": 256,
+      "name": "chunk_id",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "varchar",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": 65535,
+      "name": "content",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "varchar",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": 256,
+      "name": "document_id",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "int64",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": null,
+      "name": "chunk_index",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "int64",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": null,
+      "name": "start_char",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": null,
+      "dtype": "int64",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": null,
+      "name": "end_char",
+      "nullable": false
+    },
+    {
+      "auto_id": false,
+      "default_value": null,
+      "dim": 384,
+      "dtype": "float_vector",
+      "element_type": null,
+      "is_primary": false,
+      "max_capacity": null,
+      "max_length": null,
+      "name": "vector",
+      "nullable": false
+    }
+  ],
+  "schema_format_version": 2,
+  "version": 1
+}

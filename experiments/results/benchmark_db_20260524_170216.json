@@ -1,0 +1,132 @@
+{
+  "timestamp": "20260524_170216",
+  "config_path": "/Users/mintmaint/projects/rag-vector-db-benchmark/experiments/configs/benchmark_all_dbs.yaml",
+  "squad_version": "squad_v2",
+  "splits_used": [
+    "validation"
+  ],
+  "num_documents": 50,
+  "num_chunks": 89,
+  "num_queries_evaluated": 10,
+  "top_k": 3,
+  "embedding_seconds": 4.615950207982678,
+  "chroma_add_seconds": 0.3149857079843059,
+  "qdrant_add_seconds": 0.7323100410285406,
+  "faiss_add_seconds": 0.002276749990414828,
+  "milvus_add_seconds": 0.7055627920199186,
+  "chroma_indexing_total_seconds": 4.930935915966984,
+  "qdrant_indexing_total_seconds": 5.3482602490112185,
+  "faiss_indexing_total_seconds": 4.618226957973093,
+  "milvus_indexing_total_seconds": 5.3215130000025965,
+  "retrieval_avg_ms_chroma": 8.627270796569064,
+  "retrieval_avg_ms_qdrant": 22.20945829176344,
+  "retrieval_avg_ms_faiss": 17.536574910627678,
+  "retrieval_avg_ms_milvus": 48.33416269393638,
+  "recall_at_k_metric": "recall@3",
+  "mean_recall_chroma": 0.6,
+  "mean_recall_qdrant": 0.6,
+  "mean_recall_faiss": 0.6,
+  "mean_recall_milvus": 0.6,
+  "mean_metrics_chroma": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_qdrant": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_faiss": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_milvus": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "chroma": {
+    "indexing": {
+      "memory_usage_mb": 709.172,
+      "cpu_percent": 37.78
+    },
+    "retrieval": {
+      "memory_usage_mb": 716.359,
+      "cpu_percent": 29.59
+    }
+  },
+  "qdrant": {
+    "indexing": {
+      "memory_usage_mb": 794.859,
+      "cpu_percent": 24.05
+    },
+    "retrieval": {
+      "memory_usage_mb": 808.188,
+      "cpu_percent": 72.19
+    }
+  },
+  "faiss": {
+    "indexing": {
+      "memory_usage_mb": 816.297,
+      "cpu_percent": 11.36
+    },
+    "retrieval": {
+      "memory_usage_mb": 821.469,
+      "cpu_percent": 83.75
+    }
+  },
+  "milvus": {
+    "indexing": {
+      "memory_usage_mb": 831.656,
+      "cpu_percent": 19.67
+    },
+    "retrieval": {
+      "memory_usage_mb": 834.953,
+      "cpu_percent": 73.65
+    }
+  },
+  "winner_faster_retrieval": "ChromaDB",
+  "winner_higher_recall": "ChromaDB"
+}

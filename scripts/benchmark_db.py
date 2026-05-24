@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark ChromaDB vs Qdrant: indexing (embed + persist) and retrieval-only latency.
+"""Benchmark ChromaDB vs Qdrant vs FAISS vs Milvus: indexing (embed + persist) and retrieval-only latency.
 
 Loads N documents from SQuAD (validation, then train if needed), indexes each vector DB
 with the same embeddings, measures mean retrieval time (query embed + vector search, no LLM),
@@ -41,8 +41,10 @@ from src.embedders.sentence_transformers_embedder import SentenceTransformersEmb
 from src.evaluators.config import RetrievalEvaluatorConfig
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.retrievers.chroma_retriever import ChromaRetriever
-from src.retrievers.config import ChromaRetrieverConfig, QdrantRetrieverConfig
+from src.retrievers.config import ChromaRetrieverConfig, QdrantRetrieverConfig, FAISSRetrieverConfig, MilvusRetrieverConfig
 from src.retrievers.qdrant_retriever import QdrantRetriever
+from src.retrievers.faiss_retriever import FAISSRetriever
+from src.retrievers.milvus_retriever import MilvusRetriever
 from src.utils.config_loader import build_component_configs, load_yaml
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -223,6 +225,17 @@ def _winner_recall(chroma_r: float, qdrant_r: float) -> str:
     return "tie"
 
 
+def _winner_speed_multi(db_ms: dict[str, float]) -> str:
+    """En düşük latency'e sahip DB adını döner."""
+    return min(db_ms, key=lambda k: db_ms[k])
+
+
+def _winner_recall_multi(db_recall: dict[str, float]) -> str:
+    """En yüksek recall'a sahip DB adını döner."""
+    return max(db_recall, key=lambda k: db_recall[k])
+
+
+
 def run_benchmark(
     *,
     num_documents: int,
@@ -232,6 +245,8 @@ def run_benchmark(
     embedder_cfg: SentenceTransformersEmbedderConfig,
     chroma_cfg: ChromaRetrieverConfig,
     qdrant_cfg: QdrantRetrieverConfig,
+    faiss_cfg: FAISSRetrieverConfig,
+    milvus_cfg: MilvusRetrieverConfig,
     k_values: list[int],
     squad_version: str,
     show_progress: bool,
@@ -346,8 +361,78 @@ def run_benchmark(
     qdrant_mean = _mean_metrics(qdrant_rows)
     qdrant_recall = qdrant_mean.get(recall_key, float("nan"))
 
+    # --- FAISS: persist + resource stats ---
+    faiss = FAISSRetriever(config=faiss_cfg, embedder=embedder)
+    faiss.clear()
+    t_fidx0 = time.perf_counter()
+
+    def _faiss_index() -> None:
+        faiss.add_chunks(chunks, embeddings)
+
+    _, faiss_index_stats = run_with_resource_stats(_faiss_index)
+    faiss_add_seconds = time.perf_counter() - t_fidx0
+
+    # --- Retrieval + accuracy (FAISS) ---
+    faiss_latencies_ms: list[float] = []
+    faiss_rows: list[dict[str, float]] = []
+
+    def _faiss_retrieval_pass() -> None:
+        for q in tqdm(
+            bench_queries,
+            desc="FAISS retrieval",
+            unit="q",
+            leave=False,
+            disable=not show_progress,
+        ):
+            t_r0 = time.perf_counter()
+            result = faiss.retrieve(q, top_k=top_k)
+            faiss_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
+            gt = set(ground_truth.get(q.id, set()))
+            faiss_rows.append(evaluator.evaluate(result, gt))
+
+    _, faiss_retrieval_stats = run_with_resource_stats(_faiss_retrieval_pass)
+
+    faiss_mean = _mean_metrics(faiss_rows)
+    faiss_recall = faiss_mean.get(recall_key, float("nan"))
+
+    # --- Milvus: persist + resource stats ---
+    milvus = MilvusRetriever(config=milvus_cfg, embedder=embedder)
+    milvus.clear()
+    t_midx0 = time.perf_counter()
+
+    def _milvus_index() -> None:
+        milvus.add_chunks(chunks, embeddings)
+
+    _, milvus_index_stats = run_with_resource_stats(_milvus_index)
+    milvus_add_seconds = time.perf_counter() - t_midx0
+
+    # --- Retrieval + accuracy (Milvus) ---
+    milvus_latencies_ms: list[float] = []
+    milvus_rows: list[dict[str, float]] = []
+
+    def _milvus_retrieval_pass() -> None:
+        for q in tqdm(
+            bench_queries,
+            desc="Milvus retrieval",
+            unit="q",
+            leave=False,
+            disable=not show_progress,
+        ):
+            t_r0 = time.perf_counter()
+            result = milvus.retrieve(q, top_k=top_k)
+            milvus_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
+            gt = set(ground_truth.get(q.id, set()))
+            milvus_rows.append(evaluator.evaluate(result, gt))
+
+    _, milvus_retrieval_stats = run_with_resource_stats(_milvus_retrieval_pass)
+
+    milvus_mean = _mean_metrics(milvus_rows)
+    milvus_recall = milvus_mean.get(recall_key, float("nan"))
+
     avg_chroma_ms = _mean(chroma_latencies_ms)
     avg_qdrant_ms = _mean(qdrant_latencies_ms)
+    avg_faiss_ms = _mean(faiss_latencies_ms)
+    avg_milvus_ms = _mean(milvus_latencies_ms)
 
     chroma_block = {
         "indexing": {
@@ -369,6 +454,26 @@ def run_benchmark(
             "cpu_percent": round(qdrant_retrieval_stats.avg_cpu_percent, 2),
         },
     }
+    faiss_block = {
+        "indexing": {
+            "memory_usage_mb": round(faiss_index_stats.peak_memory_mb, 3),
+            "cpu_percent": round(faiss_index_stats.avg_cpu_percent, 2),
+        },
+        "retrieval": {
+            "memory_usage_mb": round(faiss_retrieval_stats.peak_memory_mb, 3),
+            "cpu_percent": round(faiss_retrieval_stats.avg_cpu_percent, 2),
+        },
+    }
+    milvus_block = {
+        "indexing": {
+            "memory_usage_mb": round(milvus_index_stats.peak_memory_mb, 3),
+            "cpu_percent": round(milvus_index_stats.avg_cpu_percent, 2),
+        },
+        "retrieval": {
+            "memory_usage_mb": round(milvus_retrieval_stats.peak_memory_mb, 3),
+            "cpu_percent": round(milvus_retrieval_stats.avg_cpu_percent, 2),
+        },
+    }
 
     return {
         "squad_version": squad_version,
@@ -380,19 +485,41 @@ def run_benchmark(
         "embedding_seconds": embedding_seconds,
         "chroma_add_seconds": chroma_add_seconds,
         "qdrant_add_seconds": qdrant_add_seconds,
+        "faiss_add_seconds": faiss_add_seconds,
+        "milvus_add_seconds": milvus_add_seconds,
         "chroma_indexing_total_seconds": embedding_seconds + chroma_add_seconds,
         "qdrant_indexing_total_seconds": embedding_seconds + qdrant_add_seconds,
+        "faiss_indexing_total_seconds": embedding_seconds + faiss_add_seconds,
+        "milvus_indexing_total_seconds": embedding_seconds + milvus_add_seconds,
         "retrieval_avg_ms_chroma": avg_chroma_ms,
         "retrieval_avg_ms_qdrant": avg_qdrant_ms,
+        "retrieval_avg_ms_faiss": avg_faiss_ms,
+        "retrieval_avg_ms_milvus": avg_milvus_ms,
         "recall_at_k_metric": recall_key,
         "mean_recall_chroma": chroma_recall,
         "mean_recall_qdrant": qdrant_recall,
+        "mean_recall_faiss": faiss_recall,
+        "mean_recall_milvus": milvus_recall,
         "mean_metrics_chroma": chroma_mean,
         "mean_metrics_qdrant": qdrant_mean,
+        "mean_metrics_faiss": faiss_mean,
+        "mean_metrics_milvus": milvus_mean,
         "chroma": chroma_block,
         "qdrant": qdrant_block,
-        "winner_faster_retrieval": _winner_speed(avg_chroma_ms, avg_qdrant_ms),
-        "winner_higher_recall": _winner_recall(chroma_recall, qdrant_recall),
+        "faiss": faiss_block,
+        "milvus": milvus_block,
+        "winner_faster_retrieval": _winner_speed_multi({
+            "ChromaDB": avg_chroma_ms,
+            "Qdrant": avg_qdrant_ms,
+            "FAISS": avg_faiss_ms,
+            "Milvus": avg_milvus_ms,
+        }),
+        "winner_higher_recall": _winner_recall_multi({
+            "ChromaDB": chroma_recall,
+            "Qdrant": qdrant_recall,
+            "FAISS": faiss_recall,
+            "Milvus": milvus_recall,
+        }),
     }
 
 
@@ -400,73 +527,84 @@ def _print_table(report: dict[str, Any]) -> None:
     ck = report["recall_at_k_metric"]
     ch = report["chroma"]
     qd = report["qdrant"]
-    print("\n" + "=" * 92)
+    fa = report["faiss"]
+    mi = report["milvus"]
+    print("\n" + "=" * 126)
     print("VECTOR DB BENCHMARK (SQuAD — LLM devre dışı, sadece embed + retrieval)")
-    print("=" * 92)
+    print("=" * 126)
     print(
         f"Splits: {report.get('splits_used')}  |  "
         f"Döküman: {report['num_documents']}  |  "
         f"Chunk: {report['num_chunks']}  |  "
         f"Soru: {report['num_queries_evaluated']}  |  top_k={report['top_k']}"
     )
-    print("-" * 92)
-    print(f"{'Metrik':<50} | {'ChromaDB':>16} | {'Qdrant':>16}")
-    print("-" * 92)
+    print("-" * 126)
+    print(f"{'Metrik':<50} | {'ChromaDB':>16} | {'Qdrant':>16} | {'FAISS':>16} | {'Milvus':>16}")
+    print("-" * 126)
     print(
         f"{'İndeksleme: embedding (ortak, tek geçiş) [s]':<50} | "
-        f"{report['embedding_seconds']:16.3f} | {'—':>16}"
+        f"{report['embedding_seconds']:16.3f} | {'—':>16} | {'—':>16} | {'—':>16}"
     )
     print(
         f"{'İndeksleme: DB yazma (add_chunks) [s]':<50} | "
-        f"{report['chroma_add_seconds']:16.3f} | {report['qdrant_add_seconds']:16.3f}"
+        f"{report['chroma_add_seconds']:16.3f} | {report['qdrant_add_seconds']:16.3f} | "
+        f"{report['faiss_add_seconds']:16.3f} | {report['milvus_add_seconds']:16.3f}"
     )
     print(
         f"{'İndeksleme: peak RAM (RSS) [MB]':<50} | "
-        f"{ch['indexing']['memory_usage_mb']:16.3f} | {qd['indexing']['memory_usage_mb']:16.3f}"
+        f"{ch['indexing']['memory_usage_mb']:16.3f} | {qd['indexing']['memory_usage_mb']:16.3f} | "
+        f"{fa['indexing']['memory_usage_mb']:16.3f} | {mi['indexing']['memory_usage_mb']:16.3f}"
     )
     print(
         f"{'İndeksleme: ort. CPU [%]':<50} | "
-        f"{ch['indexing']['cpu_percent']:16.2f} | {qd['indexing']['cpu_percent']:16.2f}"
+        f"{ch['indexing']['cpu_percent']:16.2f} | {qd['indexing']['cpu_percent']:16.2f} | "
+        f"{fa['indexing']['cpu_percent']:16.2f} | {mi['indexing']['cpu_percent']:16.2f}"
     )
     print(
         f"{'İndeksleme: toplam (embedding + bu DB) [s]':<50} | "
         f"{report['chroma_indexing_total_seconds']:16.3f} | "
-        f"{report['qdrant_indexing_total_seconds']:16.3f}"
+        f"{report['qdrant_indexing_total_seconds']:16.3f} | "
+        f"{report['faiss_indexing_total_seconds']:16.3f} | "
+        f"{report['milvus_indexing_total_seconds']:16.3f}"
     )
     print(
         f"{'Ortalama retrieval [ms] (sorgu embed + arama)':<50} | "
-        f"{report['retrieval_avg_ms_chroma']:16.2f} | {report['retrieval_avg_ms_qdrant']:16.2f}"
+        f"{report['retrieval_avg_ms_chroma']:16.2f} | {report['retrieval_avg_ms_qdrant']:16.2f} | "
+        f"{report['retrieval_avg_ms_faiss']:16.2f} | {report['retrieval_avg_ms_milvus']:16.2f}"
     )
     print(
         f"{'Retrieval: peak RAM (RSS) [MB]':<50} | "
-        f"{ch['retrieval']['memory_usage_mb']:16.3f} | {qd['retrieval']['memory_usage_mb']:16.3f}"
+        f"{ch['retrieval']['memory_usage_mb']:16.3f} | {qd['retrieval']['memory_usage_mb']:16.3f} | "
+        f"{fa['retrieval']['memory_usage_mb']:16.3f} | {mi['retrieval']['memory_usage_mb']:16.3f}"
     )
     print(
         f"{'Retrieval: ort. CPU [%]':<50} | "
-        f"{ch['retrieval']['cpu_percent']:16.2f} | {qd['retrieval']['cpu_percent']:16.2f}"
+        f"{ch['retrieval']['cpu_percent']:16.2f} | {qd['retrieval']['cpu_percent']:16.2f} | "
+        f"{fa['retrieval']['cpu_percent']:16.2f} | {mi['retrieval']['cpu_percent']:16.2f}"
     )
     print(
         f"{('Ortalama ' + ck):<50} | "
-        f"{report['mean_recall_chroma']:16.4f} | {report['mean_recall_qdrant']:16.4f}"
+        f"{report['mean_recall_chroma']:16.4f} | {report['mean_recall_qdrant']:16.4f} | "
+        f"{report['mean_recall_faiss']:16.4f} | {report['mean_recall_milvus']:16.4f}"
     )
-    print("-" * 92)
+    print("-" * 126)
     print(
         f"Daha hızlı retrieval: {report['winner_faster_retrieval']}  |  "
         f"Daha yüksek {ck}: {report['winner_higher_recall']}"
     )
-    print("=" * 92 + "\n")
+    print("=" * 126 + "\n")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="ChromaDB vs Qdrant: indexing ve retrieval benchmark (LLM yok)."
+        description="ChromaDB vs Qdrant vs FAISS vs Milvus: indexing ve retrieval benchmark (LLM yok)."
     )
     parser.add_argument(
         "--config",
         type=str,
         default=None,
         help="İsteğe bağlı YAML (chunker, embedder, evaluator, pipeline, "
-        "chroma_retriever, qdrant_retriever).",
+        "chroma_retriever, qdrant_retriever, faiss_retriever, milvus_retriever).",
     )
     parser.add_argument("--num-documents", type=int, default=1000)
     parser.add_argument("--num-queries", type=int, default=100)
@@ -492,8 +630,12 @@ def main() -> None:
         k_values = sorted({*exp.evaluator.k_values, args.top_k})
         chroma_dict = {k: v for k, v in raw.get("chroma_retriever", {}).items() if k != "type"}
         qdrant_dict = {k: v for k, v in raw.get("qdrant_retriever", {}).items() if k != "type"}
+        faiss_dict = {k: v for k, v in raw.get("faiss_retriever", {}).items() if k != "type"}
+        milvus_dict = {k: v for k, v in raw.get("milvus_retriever", {}).items() if k != "type"}
         chroma_cfg = ChromaRetrieverConfig(**chroma_dict) if chroma_dict else ChromaRetrieverConfig()
         qdrant_cfg = QdrantRetrieverConfig(**qdrant_dict) if qdrant_dict else QdrantRetrieverConfig()
+        faiss_cfg = FAISSRetrieverConfig(**faiss_dict) if faiss_dict else FAISSRetrieverConfig()
+        milvus_cfg = MilvusRetrieverConfig(**milvus_dict) if milvus_dict else MilvusRetrieverConfig(in_memory=True)
     else:
         chunker_cfg = FixedSizeChunkerConfig()
         embedder_cfg = SentenceTransformersEmbedderConfig()
@@ -501,6 +643,11 @@ def main() -> None:
         chroma_cfg = ChromaRetrieverConfig(collection_name="bench_chroma_squad")
         qdrant_cfg = QdrantRetrieverConfig(
             collection_name="bench_qdrant_squad",
+            in_memory=True,
+        )
+        faiss_cfg = FAISSRetrieverConfig(collection_name="bench_faiss_squad")
+        milvus_cfg = MilvusRetrieverConfig(
+            collection_name="bench_milvus_squad",
             in_memory=True,
         )
 
@@ -513,6 +660,8 @@ def main() -> None:
         embedder_cfg=embedder_cfg,
         chroma_cfg=chroma_cfg,
         qdrant_cfg=qdrant_cfg,
+        faiss_cfg=faiss_cfg,
+        milvus_cfg=milvus_cfg,
         k_values=k_values,
         squad_version=args.squad_version,
         show_progress=not args.no_progress,
