@@ -37,6 +37,12 @@ def build_retriever_from_yaml(raw_config: dict[str, Any], embedder: Embedder) ->
         from .qdrant_retriever import QdrantRetriever
 
         return QdrantRetriever(QdrantRetrieverConfig(**kwargs), embedder)
+    if rtype == "faiss":
+        from .config import FAISSRetrieverConfig
+        from .faiss_retriever import FAISSRetriever
+
+        return FAISSRetriever(FAISSRetrieverConfig(**kwargs), embedder)
     raise ValueError(
-        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant."
+        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss."
     )
+

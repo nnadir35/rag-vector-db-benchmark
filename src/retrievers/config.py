@@ -128,3 +128,30 @@ class QdrantRetrieverConfig:
                     "persist_path must be provided when in_memory is False "
                     "unless QDRANT_URL or QDRANT_HOST is set for remote mode"
                 )
+
+
+@dataclass(frozen=True)
+class FAISSRetrieverConfig:
+    """Configuration for FAISSRetriever.
+
+    Attributes:
+        index_type: FAISS index türü. 'flat_ip' (cosine/dot) veya 'flat_l2' (euclidean).
+        distance_metric: 'cosine', 'ip', 'l2'. 'cosine' seçilince vektörler
+                         normalize edilir ve flat_ip index kullanılır.
+        persist_path: Opsiyonel. Belirtilirse index ve metadata bu .index/.pkl
+                      dosya çiftine kaydedilir. None = sadece in-memory.
+        collection_name: Index'i tanımlayan etiket (sonuç metadata'sında kullanılır).
+    """
+    collection_name: str = field(default="faiss_benchmark")
+    distance_metric: str = field(default="cosine")
+    persist_path: str | None = field(default=None)
+
+    def __post_init__(self) -> None:
+        valid = {"cosine", "l2", "ip"}
+        if self.distance_metric not in valid:
+            raise ValueError(
+                f"distance_metric must be one of {valid}, got '{self.distance_metric}'"
+            )
+        if not self.collection_name:
+            raise ValueError("collection_name cannot be empty")
+

@@ -10,10 +10,10 @@
 ## 📍 ŞU ANKİ DURUM
 
 ```
-SON GÜNCELLEME : 07.03.2026
+SON GÜNCELLEME : 24.05.2026
 AKTİF GÖREV    : BİTTİ! Tüm Sistem Hazır! 🚀
 SONRAKİ GÖREV  : Entegrasyon / Kullanıcı Testi
-TAMAMLANAN     : 10/10
+TAMAMLANAN     : 11/11
 ```
 
 ---
@@ -36,6 +36,7 @@ TAMAMLANAN     : 10/10
 - [x] 8. run_experiment.py — 07.03.2026 ✅
 - [x] 9. ChromaRetriever — 07.03.2026 ✅
 - [x] 10. GenerationEvaluator — 07.03.2026 ✅
+- [x] 11. FAISSRetriever — 24.05.2026 ✅
 
 ---
 
@@ -53,6 +54,8 @@ Sırayı bozma. Her biri bir öncekine bağlı.
 - [x] **8. run_experiment.py**
 - [x] **9. ChromaRetriever**
 - [x] **10. GenerationEvaluator**
+- [x] **11. FAISSRetriever**
+
 
 ---
 
