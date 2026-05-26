@@ -1,0 +1,6 @@
+# .claudeignore
+experiments/results/
+*.json
+__pycache__/
+.venv/
+*.pyc

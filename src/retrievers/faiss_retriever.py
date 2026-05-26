@@ -29,6 +29,9 @@ from ..core.types import (
 from .config import FAISSRetrieverConfig
 
 
+FAISS_ADD_BATCH_SIZE = 512  # modül seviyesinde sabit
+
+
 class FAISSRetriever(Retriever):
     """FAISS-based retriever implementation."""
 
@@ -58,6 +61,9 @@ class FAISSRetriever(Retriever):
         """
         global faiss
         if faiss is None:
+            import os
+            # Set OMP_NUM_THREADS to 1 to avoid thread/OpenMP conflicts on macOS
+            os.environ["OMP_NUM_THREADS"] = "1"
             try:
                 import faiss as _faiss
                 faiss = _faiss
@@ -91,15 +97,16 @@ class FAISSRetriever(Retriever):
         return self._index
 
     def _normalize_if_cosine(self, vectors: np.ndarray) -> np.ndarray:
-        """Normalize vectors if distance metric is cosine.
-
-        Args:
-            vectors: Numpy array of vectors
-
-        Returns:
-            Normalized or unchanged numpy array of vectors
-        """
+        """Cosine modunda vektörleri normalize eder, yeni array döner."""
         if self._config.distance_metric == "cosine":
+            # C-contiguous, writable ve float32 mi kontrol et. Değilse kopyasını al, segfault'u önle.
+            if not (
+                isinstance(vectors, np.ndarray)
+                and vectors.flags.c_contiguous
+                and vectors.flags.writeable
+                and vectors.dtype == np.float32
+            ):
+                vectors = np.array(vectors, dtype=np.float32, order="C", copy=True)
             self._ensure_faiss_imported()
             faiss.normalize_L2(vectors)
         return vectors
@@ -137,16 +144,26 @@ class FAISSRetriever(Retriever):
                         "All embeddings must share the same dimension for FAISS indexing"
                     )
 
-            vecs = np.array([e.vector for e in embeddings], dtype=np.float32)
-            vecs = self._normalize_if_cosine(vecs)
+            self._get_or_create_index(first_dim)
 
-            index = self._get_or_create_index(first_dim)
-            index.add(vecs)
+            # Batch'li insert — büyük vektör matrisinde segfault önler
+            for batch_start in range(0, len(chunks), FAISS_ADD_BATCH_SIZE):
+                batch_end = batch_start + FAISS_ADD_BATCH_SIZE
+                chunk_batch = chunks[batch_start:batch_end]
+                emb_batch = embeddings[batch_start:batch_end]
 
-            for i, chunk in enumerate(chunks):
-                self._id_to_chunk[self._next_id + i] = chunk
+                vectors = np.array(
+                    [list(e.vector) for e in emb_batch],
+                    dtype=np.float32,
+                    order="C",
+                    copy=True
+                )
+                vectors = self._normalize_if_cosine(vectors)
+                self._index.add(vectors)
 
-            self._next_id += len(chunks)
+                for chunk in chunk_batch:
+                    self._id_to_chunk[self._next_id] = chunk
+                    self._next_id += 1
 
             if self._config.persist_path:
                 self._save_to_disk()
@@ -256,7 +273,10 @@ class FAISSRetriever(Retriever):
             )
 
         try:
-            query_vector = np.array([query_embedding.vector], dtype=np.float32)
+            # Sorgu vektörü: C-contiguous, writable, float32
+            query_vector = np.array(
+                [list(query_embedding.vector)], dtype=np.float32, order="C", copy=True
+            )
             query_vector = self._normalize_if_cosine(query_vector)
 
             start_time = time.time()

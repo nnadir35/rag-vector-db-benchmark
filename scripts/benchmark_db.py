@@ -41,7 +41,8 @@ from src.embedders.sentence_transformers_embedder import SentenceTransformersEmb
 from src.evaluators.config import RetrievalEvaluatorConfig
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.retrievers.chroma_retriever import ChromaRetriever
-from src.retrievers.config import ChromaRetrieverConfig, QdrantRetrieverConfig, FAISSRetrieverConfig, MilvusRetrieverConfig
+from src.retrievers.elasticsearch_retriever import ElasticSearchRetriever
+from src.retrievers.config import ElasticSearchRetrieverConfig
 from src.retrievers.qdrant_retriever import QdrantRetriever
 from src.retrievers.faiss_retriever import FAISSRetriever
 from src.retrievers.milvus_retriever import MilvusRetriever

@@ -182,3 +182,40 @@ class MilvusRetrieverConfig:
         if not self.collection_name:
             raise ValueError("collection_name cannot be empty")
 
+
+# ElasticSearch retriever configuration
+
+from dataclasses import dataclass, field
+import os
+
+@dataclass(frozen=True)
+class ElasticSearchRetrieverConfig:
+    """Configuration for ElasticSearchRetriever.
+
+    Attributes:
+        index_name: Elasticsearch index name.
+        distance_metric: 'cosine', 'dot_product', or 'l2_norm'.
+        in_memory: If True, use an in‑memory mock (no external ES).
+        host: Elasticsearch host URL (default http://localhost:9200). Overridden by
+            ELASTICSEARCH_HOST environment variable if set.
+        dims: Dimension of the embedding vectors (default 384 for MiniLM).
+    """
+
+    index_name: str = field(default="es_benchmark")
+    distance_metric: str = field(default="cosine")
+    in_memory: bool = field(default=True)
+    host: str = field(default="http://localhost:9200")
+    dims: int = field(default=384)
+
+    def __post_init__(self) -> None:
+        valid = {"cosine", "dot_product", "l2_norm"}
+        if self.distance_metric not in valid:
+            raise ValueError(
+                f"distance_metric must be one of {valid}, got '{self.distance_metric}'"
+            )
+        if not self.index_name:
+            raise ValueError("index_name cannot be empty")
+        env_host = os.getenv("ELASTICSEARCH_HOST")
+        if env_host and env_host.strip():
+            object.__setattr__(self, "host", env_host.strip())
+

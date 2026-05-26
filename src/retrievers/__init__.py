@@ -4,14 +4,8 @@ This module contains concrete retriever implementations that integrate
 with various vector databases and retrieval systems.
 """
 
-from .chroma_retriever import ChromaRetriever
-from .config import (
-    ChromaRetrieverConfig,
-    FAISSRetrieverConfig,
-    MilvusRetrieverConfig,
-    PineconeRetrieverConfig,
-    QdrantRetrieverConfig,
-)
+from .elasticsearch_retriever import ElasticSearchRetriever
+from .config import ElasticSearchRetrieverConfig
 from .faiss_retriever import FAISSRetriever
 from .factory import build_retriever_from_yaml
 from .milvus_retriever import MilvusRetriever
@@ -31,7 +25,7 @@ register_retriever("chroma", ChromaRetriever)
 register_retriever("qdrant", QdrantRetriever)
 register_retriever("faiss", FAISSRetriever)
 register_retriever("milvus", MilvusRetriever)
-
+register_retriever("elasticsearch", ElasticSearchRetriever)
 __all__ = [
     # Retriever implementations
     "PineconeRetriever",
