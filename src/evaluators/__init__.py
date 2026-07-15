@@ -3,7 +3,8 @@
 This package provides metric functions and concrete evaluator classes.
 """
 
-from .config import RetrievalEvaluatorConfig
+from .answer_quality_evaluator import AnswerQualityEvaluator
+from .config import AnswerQualityEvaluatorConfig, RetrievalEvaluatorConfig
 from .generation_evaluator import GenerationEvaluator
 from .judge_prompts import FAITHFULNESS_PROMPT, RELEVANCY_PROMPT
 from .retrieval_evaluator import RetrievalEvaluator
@@ -13,5 +14,7 @@ __all__ = [
     "RetrievalEvaluator",
     "GenerationEvaluator",
     "FAITHFULNESS_PROMPT",
-    "RELEVANCY_PROMPT"
+    "RELEVANCY_PROMPT",
+    "AnswerQualityEvaluatorConfig",
+    "AnswerQualityEvaluator",
 ]

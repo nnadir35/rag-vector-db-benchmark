@@ -5,14 +5,20 @@ with various vector databases and retrieval systems.
 """
 
 from .elasticsearch_retriever import ElasticSearchRetriever
-from .config import ElasticSearchRetrieverConfig
 from .faiss_retriever import FAISSRetriever
 from .factory import build_retriever_from_yaml
 from .milvus_retriever import MilvusRetriever
 from .pinecone_retriever import PineconeRetriever
 from .qdrant_retriever import QdrantRetriever
 from .chroma_retriever import ChromaRetriever
-from .config import ChromaRetrieverConfig
+from .config import (
+    ChromaRetrieverConfig,
+    ElasticSearchRetrieverConfig,
+    FAISSRetrieverConfig,
+    MilvusRetrieverConfig,
+    PineconeRetrieverConfig,
+    QdrantRetrieverConfig,
+)
 from .registry import (
     RETRIEVER_REGISTRY,
     get_retriever,

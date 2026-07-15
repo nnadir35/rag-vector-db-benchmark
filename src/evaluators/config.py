@@ -21,3 +21,11 @@ class RetrievalEvaluatorConfig:
         for k in self.k_values:
             if k <= 0:
                 raise ValueError(f"All k values must be positive, got {k}")
+
+@dataclass(frozen=True)
+class AnswerQualityEvaluatorConfig:
+    """Configuration for AnswerQualityEvaluator.
+
+    No parameters needed for SQuAD metrics, but provided for consistency.
+    """
+    pass

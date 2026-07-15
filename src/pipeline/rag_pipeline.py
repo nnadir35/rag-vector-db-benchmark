@@ -30,6 +30,7 @@ class RAGPipeline:
         config: RAGPipelineConfig,
         retrieval_evaluator: Evaluator | None = None,
         generation_evaluator: Evaluator | None = None,
+        answer_quality_evaluator: Evaluator | None = None,
     ) -> None:
         """Initialize the pipeline.
 
@@ -44,11 +45,13 @@ class RAGPipeline:
         self._config = config
         self._retrieval_evaluator = retrieval_evaluator
         self._generation_evaluator = generation_evaluator
+        self._answer_quality_evaluator = answer_quality_evaluator
 
     async def run(
         self,
         query: str,
-        ground_truth_ids: list[str] | None = None
+        ground_truth_ids: list[str] | None = None,
+        gold_answers: list[str] | None = None
     ) -> PipelineResult:
         """Execute the pipeline asynchronously for a single query.
 
@@ -114,6 +117,17 @@ class RAGPipeline:
                 metrics = {}
             metrics.update(gen_metrics)
 
+        # 5. Evaluate Answer Quality
+        if getattr(self._config, "evaluate_answer_quality", False) and getattr(self, "_answer_quality_evaluator", None) and gold_answers is not None:
+            aq_metrics = await asyncio.to_thread(
+                self._answer_quality_evaluator.evaluate,
+                rag_response,
+                gold_answers
+            )
+            if metrics is None:
+                metrics = {}
+            metrics.update(aq_metrics)
+
         total_time = time.time() - start_time
 
         return PipelineResult(
@@ -126,7 +140,8 @@ class RAGPipeline:
     async def run_batch(
         self,
         queries: Sequence[str],
-        ground_truths: Sequence[list[str]] | None = None
+        ground_truths: Sequence[list[str]] | None = None,
+        gold_answers_list: Sequence[list[str]] | None = None
     ) -> list[PipelineResult]:
         """Execute the pipeline across multiple queries concurrently.
 
@@ -146,7 +161,8 @@ class RAGPipeline:
         tasks = []
         for i, q in enumerate(queries):
             truth = ground_truths[i] if ground_truths else None
-            task = self.run(q, truth)
+            g_ans = gold_answers_list[i] if gold_answers_list else None
+            task = self.run(q, truth, g_ans)
             tasks.append(task)
 
         results = await asyncio.gather(*tasks)

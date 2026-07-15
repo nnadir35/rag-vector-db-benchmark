@@ -7,11 +7,12 @@ framework's core Data types (Query, Document).
 
 import hashlib
 
+from ..core.dataset import DatasetLoader
 from ..core.types import Document, DocumentMetadata, Query
 from .config import SQuADDatasetConfig
 
 
-class SQuADLoader:
+class SQuADLoader(DatasetLoader):
     """Stanford Question Answering Dataset (SQuAD) loader.
 
     This loader fetches data from HuggingFace datasets and maps them into
@@ -150,3 +151,26 @@ class SQuADLoader:
             return documents
         except Exception as e:
             raise RuntimeError(f"Error processing SQuAD documents: {e}") from e
+
+    def load_gold_answers(self) -> dict[str, list[str]]:
+        """Query ID'den o sorunun kabul edilebilir tüm altın cevap metinlerine eşleme.
+
+        SQuAD validation setinde bir soru için birden fazla geçerli cevap olabilir
+        (crowd-sourced). SQuAD 2.0'da cevaplanamayan sorular için boş liste döner.
+        """
+        self._ensure_dataset_loaded()
+        
+        gold_answers: dict[str, list[str]] = {}
+        
+        try:
+            for item in self._dataset:
+                query_id = str(item["id"])
+                answers = item.get("answers", {})
+                # SQuAD returns 'text' as a list of strings
+                text_list = answers.get("text", [])
+                
+                gold_answers[query_id] = [str(text) for text in text_list]
+                
+            return gold_answers
+        except Exception as e:
+            raise RuntimeError(f"Error processing SQuAD gold answers: {e}") from e

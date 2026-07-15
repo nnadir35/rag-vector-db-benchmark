@@ -30,6 +30,7 @@ class ExperimentConfig:
     generator: UniversalGeneratorConfig
     evaluator: RetrievalEvaluatorConfig
     pipeline: RAGPipelineConfig
+    judge_generator: UniversalGeneratorConfig | None = None
 
 
 def load_yaml(file_path: str) -> dict[str, Any]:
@@ -78,6 +79,9 @@ def build_component_configs(config_dict: dict[str, Any]) -> ExperimentConfig:
     """
     exp_name = config_dict.get("experiment", {}).get("name", "unnamed_experiment")
 
+    judge_gen_dict = config_dict.get("judge_generator")
+    judge_gen_config = UniversalGeneratorConfig(**judge_gen_dict) if judge_gen_dict else None
+
     return ExperimentConfig(
         name=exp_name,
         chunker=FixedSizeChunkerConfig(**config_dict.get("chunker", {})),
@@ -86,4 +90,5 @@ def build_component_configs(config_dict: dict[str, Any]) -> ExperimentConfig:
         generator=UniversalGeneratorConfig(**config_dict.get("generator", {})),
         evaluator=RetrievalEvaluatorConfig(**config_dict.get("evaluator", {})),
         pipeline=RAGPipelineConfig(**config_dict.get("pipeline", {})),
+        judge_generator=judge_gen_config,
     )

@@ -20,7 +20,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.chunkers.fixed_size_chunker import FixedSizeChunker
 from src.datasets.squad_loader import SQuADLoader
+from src.datasets import DatasetLoader
 from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
+from src.evaluators.answer_quality_evaluator import AnswerQualityEvaluator
 from src.evaluators.generation_evaluator import GenerationEvaluator
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.generators.universal_generator import UniversalGenerator
@@ -84,9 +86,10 @@ async def main_async(args: argparse.Namespace) -> None:
 
     # 2. Setup Data Loader
     logging.info("Loading dataset...")
-    loader = SQuADLoader(exp_config.dataset)
+    loader: DatasetLoader = SQuADLoader(exp_config.dataset)
     try:
         queries, ground_truth = loader.load()
+        gold_answers = loader.load_gold_answers()
         raw_documents = loader.load_documents()
         logging.info(f"Loaded {len(queries)} queries and {len(raw_documents)} documents.")
     except Exception as e:
@@ -102,10 +105,15 @@ async def main_async(args: argparse.Namespace) -> None:
     logging.info(f"Generated {len(chunks)} chunks from {len(raw_documents)} documents.")
 
     # 3. Component Instantiation
-    logging.info("Initializing Generator and Evaluator...")
+    logging.info("Initializing Generator and Evaluators...")
     generator = UniversalGenerator(exp_config.generator)
     evaluator = RetrievalEvaluator(exp_config.evaluator)
-    generation_evaluator = GenerationEvaluator(judge_generator=generator)
+    
+    judge_config = exp_config.judge_generator or exp_config.generator
+    judge_gen = UniversalGenerator(judge_config) if exp_config.judge_generator else generator
+    generation_evaluator = GenerationEvaluator(judge_generator=judge_gen)
+    
+    answer_quality_evaluator = AnswerQualityEvaluator()
 
     logging.info("Initializing Embedder and computing embeddings...")
     embedder = SentenceTransformersEmbedder(exp_config.embedder)
@@ -124,7 +132,8 @@ async def main_async(args: argparse.Namespace) -> None:
         generator=generator,
         config=exp_config.pipeline,
         retrieval_evaluator=evaluator,
-        generation_evaluator=generation_evaluator
+        generation_evaluator=generation_evaluator,
+        answer_quality_evaluator=answer_quality_evaluator
     )
 
     # 4. Run Experiment
@@ -134,6 +143,7 @@ async def main_async(args: argparse.Namespace) -> None:
     query_texts = [q.text for q in queries]
     # Keep ground truth matching based on original query ids
     gt_lists = [list(ground_truth.get(q.id, set())) for q in queries]
+    gold_answer_lists = [gold_answers.get(q.id, []) for q in queries]
 
     # Handle batch processing safely by chunking locally so we don't bombard APIs simultaneously
     batch_size = 5
@@ -142,8 +152,9 @@ async def main_async(args: argparse.Namespace) -> None:
     for i in range(0, len(query_texts), batch_size):
         batch_q = query_texts[i:i+batch_size]
         batch_gt = gt_lists[i:i+batch_size]
+        batch_gold_answers = gold_answer_lists[i:i+batch_size]
         logging.info(f"Processing batch {i//batch_size + 1}...")
-        results = await pipeline.run_batch(batch_q, batch_gt)
+        results = await pipeline.run_batch(batch_q, batch_gt, batch_gold_answers)
         all_results.extend(results)
 
     execution_time = time.time() - start_time

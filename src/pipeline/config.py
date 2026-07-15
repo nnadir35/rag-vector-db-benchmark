@@ -20,6 +20,7 @@ class RAGPipelineConfig:
     top_k: int = field(default=5)
     evaluate_retrieval: bool = field(default=True)
     evaluate_generation: bool = field(default=False)
+    evaluate_answer_quality: bool = field(default=False)
 
     def __post_init__(self) -> None:
         """Validate pipeline configuration limits."""

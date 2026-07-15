@@ -37,6 +37,7 @@ from src.chunkers.fixed_size_chunker import FixedSizeChunker
 from src.core.types import Chunk, Document, Embedding, Query
 from src.datasets.config import SQuADDatasetConfig
 from src.datasets.squad_loader import SQuADLoader
+from src.datasets import DatasetLoader
 from src.embedders.config import SentenceTransformersEmbedderConfig
 from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
 from src.evaluators.config import RetrievalEvaluatorConfig
@@ -139,7 +140,7 @@ def load_squad_corpus(
     if num_documents <= 0:
         raise ValueError(f"num_documents must be positive, got {num_documents}")
 
-    val_loader = SQuADLoader(
+    val_loader: DatasetLoader = SQuADLoader(
         SQuADDatasetConfig(split="validation", max_samples=None, version=version)
     )
     logging.info("Loading SQuAD validation split...")
@@ -157,7 +158,7 @@ def load_squad_corpus(
         len(val_docs),
         num_documents,
     )
-    train_loader = SQuADLoader(
+    train_loader: DatasetLoader = SQuADLoader(
         SQuADDatasetConfig(split="train", max_samples=None, version=version)
     )
     train_queries, train_gt = train_loader.load()
