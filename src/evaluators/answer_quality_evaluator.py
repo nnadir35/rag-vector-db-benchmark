@@ -36,8 +36,8 @@ class AnswerQualityEvaluator(Evaluator):
         Returns:
             A dictionary with 'exact_match' and 'f1' float values.
         """
-        em = exact_match_score(result.answer, ground_truth)
-        f1 = f1_score(result.answer, ground_truth)
+        em = exact_match_score(result.response, ground_truth)
+        f1 = f1_score(result.response, ground_truth)
         
         return {
             "exact_match": em,
