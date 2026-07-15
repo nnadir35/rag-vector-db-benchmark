@@ -2,6 +2,7 @@
 # RAG Vector DB Benchmark — Proje Hafızası
 #
 # ⚠️  BU DOSYAYI HER SOHBETIN BAŞINDA OKU
+> **Not:** Bu dosya (AGENTS.md) projenin detaylı ilerleme günlüğü ve görev listesidir. Hızlı komut referansı ve kod stil kuralları için `CLAUDE.md` dosyasına bakın.
 # ⚠️  HER MODÜL BİTİNCE DURUMU GÜNCELLE (✅ yap)
 # ⚠️  ASLA mimariye aykırı kod yazma — kurallar aşağıda
 
@@ -13,7 +14,7 @@
 SON GÜNCELLEME : 25.05.2026
 AKTİF GÖREV    : BİTTİ! 10K Döküman Ölçeği FAISS Segfault Hatası Düzeltildi! 🚀
 SONRAKİ GÖREV  : Entegrasyon / Kullanıcı Testi
-TAMAMLANAN     : 13/13
+TAMAMLANAN     : 15/15
 ```
 
 ---
@@ -39,6 +40,8 @@ TAMAMLANAN     : 13/13
 - [x] 11. FAISSRetriever — 24.05.2026 ✅
 - [x] 12. MilvusRetriever — 24.05.2026 ✅
 - [x] 13. benchmark_db.py 4-DB güncellemesi — 24.05.2026 ✅
+- [x] 14. PineconeRetriever — 25.05.2026 ✅
+- [x] 15. ElasticSearchRetriever — 25.05.2026 ✅
 
 ---
 
@@ -59,6 +62,8 @@ Sırayı bozma. Her biri bir öncekine bağlı.
 - [x] **11. FAISSRetriever**
 - [x] **12. MilvusRetriever**
 - [x] **13. benchmark_db.py 4-DB güncellemesi**
+- [x] **14. PineconeRetriever**
+- [x] **15. ElasticSearchRetriever**
 
 
 ---

@@ -18,10 +18,12 @@ This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipeli
 | Precision@1 | **0.610** | 61% of top results are directly relevant |
 | Recall@3 | **0.820** | 82% of relevant documents found in top 3 results |
 
+*Not: Tablodaki sonuçlar `experiments/results/20260307_051139_baseline_ollama_squad.json` test çalışmasından alınmıştır.*
+
 ## What This Enables
 
 - **Drop in any LLM**: Ollama (local/private), OpenAI, Anthropic — swap with one config change
-- **Drop in any vector DB**: ChromaDB today, Pinecone or Weaviate tomorrow — no code changes
+- **Drop in any vector DB**: ChromaDB, Qdrant, FAISS, Milvus, Pinecone ve ElasticSearch — tümü aynı Retriever arayüzü üzerinden, kod değişikliği olmadan
 - **Measure before you ship**: Know your retrieval quality with real numbers before going to production
 - **Full privacy option**: Runs entirely locally with Ollama — no data leaves your servers
 

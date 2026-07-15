@@ -1,5 +1,7 @@
 # RAG Vector DB Benchmark
 
+> **Not:** Bu dosya (CLAUDE.md) hızlı komut referansı, stil kuralları ve sistem talimatlarını içerir. Detaylı ilerleme günlüğü ve modül durumu için `AGENTS.md` dosyasına bakın.
+
 ## Commands
 - **Lint:** `ruff check src/ scripts/`
 - **Type check:** `mypy .`

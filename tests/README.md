@@ -8,7 +8,12 @@ Bu dizin RAG benchmark framework'ün test dosyalarını içerir.
 tests/
 ├── conftest.py                    # Shared fixtures ve mock'lar
 ├── retrievers/
+│   ├── test_chroma_retriever.py   # ChromaRetriever testleri
+│   ├── test_elasticsearch_retriever.py # ElasticSearchRetriever testleri
+│   ├── test_faiss_retriever.py    # FAISSRetriever testleri
+│   ├── test_milvus_retriever.py   # MilvusRetriever testleri
 │   ├── test_pinecone_retriever.py # PineconeRetriever testleri
+│   ├── test_qdrant_retriever.py   # QdrantRetriever testleri (varsa)
 │   ├── test_registry.py           # Registry pattern testleri
 │   └── test_config.py             # Config class testleri
 ```

@@ -1,0 +1,161 @@
+{
+  "timestamp": "20260715_163712",
+  "config_path": null,
+  "squad_version": "squad_v2",
+  "splits_used": [
+    "validation"
+  ],
+  "num_documents": 50,
+  "num_chunks": 89,
+  "num_queries_evaluated": 10,
+  "top_k": 3,
+  "embedding_seconds": 6.908288750000793,
+  "chroma_add_seconds": 0.6108727080027165,
+  "qdrant_add_seconds": 0.7883070829993812,
+  "faiss_add_seconds": 0.0050142090003646445,
+  "milvus_add_seconds": 0.7343512919978821,
+  "elasticsearch_add_seconds": 0.003111582998826634,
+  "chroma_indexing_total_seconds": 7.519161458003509,
+  "qdrant_indexing_total_seconds": 7.696595833000174,
+  "faiss_indexing_total_seconds": 6.913302959001157,
+  "milvus_indexing_total_seconds": 7.642640041998675,
+  "elasticsearch_indexing_total_seconds": 6.911400332999619,
+  "retrieval_avg_ms_chroma": 8.68226659949869,
+  "retrieval_avg_ms_qdrant": 24.637812599758036,
+  "retrieval_avg_ms_faiss": 20.495879099689773,
+  "retrieval_avg_ms_milvus": 48.79711660032626,
+  "retrieval_avg_ms_elasticsearch": 30.289420900589903,
+  "recall_at_k_metric": "recall@3",
+  "mean_recall_chroma": 0.6,
+  "mean_recall_qdrant": 0.6,
+  "mean_recall_faiss": 0.6,
+  "mean_recall_milvus": 0.6,
+  "mean_recall_elasticsearch": 0.6,
+  "mean_metrics_chroma": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_qdrant": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_faiss": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_milvus": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "mean_metrics_elasticsearch": {
+    "mrr": 0.4333333333333333,
+    "precision@1": 0.3,
+    "recall@1": 0.3,
+    "ndcg@1": 0.3,
+    "precision@3": 0.21666666666666665,
+    "recall@3": 0.6,
+    "ndcg@3": 0.47618595071429154,
+    "precision@5": 0.21666666666666665,
+    "recall@5": 0.6,
+    "ndcg@5": 0.47618595071429154,
+    "precision@10": 0.21666666666666665,
+    "recall@10": 0.6,
+    "ndcg@10": 0.47618595071429154
+  },
+  "chroma": {
+    "indexing": {
+      "memory_usage_mb": 751.016,
+      "cpu_percent": 22.3
+    },
+    "retrieval": {
+      "memory_usage_mb": 751.891,
+      "cpu_percent": 29.22
+    }
+  },
+  "qdrant": {
+    "indexing": {
+      "memory_usage_mb": 831.781,
+      "cpu_percent": 21.98
+    },
+    "retrieval": {
+      "memory_usage_mb": 836.391,
+      "cpu_percent": 66.16
+    }
+  },
+  "faiss": {
+    "indexing": {
+      "memory_usage_mb": 844.641,
+      "cpu_percent": 71.38
+    },
+    "retrieval": {
+      "memory_usage_mb": 845.328,
+      "cpu_percent": 85.82
+    }
+  },
+  "milvus": {
+    "indexing": {
+      "memory_usage_mb": 856.172,
+      "cpu_percent": 10.8
+    },
+    "retrieval": {
+      "memory_usage_mb": 861.75,
+      "cpu_percent": 75.32
+    }
+  },
+  "elasticsearch": {
+    "indexing": {
+      "memory_usage_mb": 861.828,
+      "cpu_percent": 72.8
+    },
+    "retrieval": {
+      "memory_usage_mb": 861.922,
+      "cpu_percent": 85.53
+    }
+  },
+  "winner_faster_retrieval": "ChromaDB",
+  "winner_higher_recall": "ChromaDB"
+}

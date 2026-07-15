@@ -50,7 +50,7 @@ rag-vector-db-benchmark/
 **Responsibility**: Implement retrieval components that query vector databases and return ranked document chunks.
 
 **What belongs here**:
-- Concrete retriever implementations (e.g., `PineconeRetriever`, `WeaviateRetriever`)
+- Concrete retriever implementations (ChromaRetriever, QdrantRetriever, FAISSRetriever, MilvusRetriever, PineconeRetriever, ElasticSearchRetriever; e.g., WeaviateRetriever)
 - Retriever-specific configuration classes
 - Embedding model wrappers used by retrievers
 - Vector database client abstractions

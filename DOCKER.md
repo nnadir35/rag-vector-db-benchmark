@@ -21,19 +21,34 @@ Arka planda:
 docker compose up --build -d
 ```
 
-- **Qdrant HTTP:** `http://localhost:6333` (konteynerler arası: `http://qdrant-server:6333`)
+- **Qdrant HTTP:** `http://localhost:6333` (konteynerler arası: `http://qdrant-server:6333` veya `http://qdrant_db:6333`)
 - **FastAPI:** `http://localhost:8000` — örn. `http://localhost:8000/docs`
+- **ChromaDB:** `http://localhost:8000` (FastAPI ile çakışabilir, portu `CHROMA_PORT` ile ayarlayın)
+- **ElasticSearch:** `http://localhost:9200`
+- **Milvus:** `http://localhost:19530` (API port: 9091)
+- **Postgres:** `localhost:5432`
+- **Redis:** `localhost:6379`
 
 ## Ortam değişkenleri (özet)
 
 | Değişken | Açıklama |
 |----------|----------|
 | `QDRANT_URL` | Tam URL (öncelikli), örn. `http://qdrant-server:6333` |
-| `QDRANT_HOST` | Sunucu host’u (Compose’ta `qdrant-server`) |
+| `QDRANT_HOST` | Sunucu host’u (Compose’ta `qdrant_db`) |
 | `QDRANT_PORT` | Varsayılan `6333` |
 | `CHROMA_PERSIST_DIRECTORY` | Chroma disk yolu (örn. `/data/chroma`) |
-| `CHROMA_HOST` / `CHROMA_PORT` | Ayrı Chroma sunucusu (opsiyonel) |
+| `CHROMA_HOST` / `CHROMA_PORT` | Ayrı Chroma sunucusu (varsayılan port `8000`) |
 | `RAG_CONFIG_PATH` | YAML yolu (Compose’ta `experiments/configs/docker_rag_api.yaml`) |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Postgres veritabanı ayarları |
+| `REDIS_PORT` | Redis portu (varsayılan `6379`) |
+| `ELASTIC_VERSION` / `ELASTIC_PORT` | ElasticSearch versiyon ve portu (varsayılan `8.12.0`, `9200`) |
+| `MILVUS_PORT` / `MILVUS_API_PORT` | Milvus portları (varsayılan `19530`, `9091`) |
+
+## Servis Bağımlılıkları (Startup Sequence)
+
+`docker-compose.yml` içinde bazı servisler diğerlerinin ayağa kalkmasını bekler:
+- **Milvus (`milvus_db`)**: Çalışmadan önce `etcd` (`milvus_etcd`) ve `minio` (`milvus_minio`) servislerinin `healthy` durumuna gelmesini bekler (`depends_on` ve `healthcheck` mekanizması ile).
+- Diğer veritabanları (Qdrant, Chroma, ElasticSearch, Postgres, Redis) birbirinden bağımsız kalkar ve kendi `healthcheck` tanımlarına sahiptir.
 
 ## Benchmark’ı konteyner içinden çalıştırma
 

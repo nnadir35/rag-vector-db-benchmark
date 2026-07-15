@@ -37,3 +37,10 @@ milvus_retriever:
   collection_name: "bench_milvus_squad"
   distance_metric: "cosine"
   in_memory: true
+
+elasticsearch_retriever:
+  # Requires docker-compose up elasticsearch for in_memory: false
+  index_name: "bench_elasticsearch_squad"
+  distance_metric: "cosine"
+  in_memory: false
+  host: "http://localhost:9200"

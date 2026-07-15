@@ -1,5 +1,5 @@
 experiment:
-  name: "baseline_ollama_squad"
+  name: "baseline_qdrant_squad"
 
 dataset:
   split: "validation"
