@@ -26,7 +26,7 @@ generator:
   system_prompt: "Answer based only on the provided context. Be highly concise."
 
 judge_generator:
-  model_name: "ollama/mistral-small3.2"   # generator'dan (llama3:8b) farklı bir model
+  model_name: "ollama/llama3.1:8b"   # generator'dan (llama3:8b) farklı bir model
   temperature: 0.0
   max_tokens: 512
   api_base: "http://localhost:11434"
