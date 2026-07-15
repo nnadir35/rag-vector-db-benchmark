@@ -23,7 +23,7 @@ This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipeli
 ## What This Enables
 
 - **Drop in any LLM**: Ollama (local/private), OpenAI, Anthropic — swap with one config change
-- **Drop in any vector DB**: ChromaDB, Qdrant, FAISS, Milvus, Pinecone ve ElasticSearch — tümü aynı Retriever arayüzü üzerinden, kod değişikliği olmadan
+- **Drop in any vector DB**: Implemented: ChromaDB, Qdrant, FAISS, Milvus, ElasticSearch, Weaviate. Pinecone adapter exists but is not part of the systematic benchmark.
 - **Measure before you ship**: Know your retrieval quality with real numbers before going to production
 - **Full privacy option**: Runs entirely locally with Ollama — no data leaves your servers
 

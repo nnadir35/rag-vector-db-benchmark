@@ -44,3 +44,8 @@ elasticsearch_retriever:
   distance_metric: "cosine"
   in_memory: false
   host: "http://localhost:9200"
+
+weaviate_retriever:
+  collection_name: "bench_weaviate_squad"
+  distance_metric: "cosine"
+  in_memory: true

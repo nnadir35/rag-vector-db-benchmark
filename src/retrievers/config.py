@@ -219,3 +219,11 @@ class ElasticSearchRetrieverConfig:
         if env_host and env_host.strip():
             object.__setattr__(self, "host", env_host.strip())
 
+
+@dataclass(frozen=True)
+class WeaviateRetrieverConfig:
+    collection_name: str = "rag_benchmark"
+    distance_metric: str = "cosine"   # weaviate: cosine, dot, l2-squared, manhattan, hamming
+    in_memory: bool = True
+    host: str = "http://localhost:8080"
+    dims: int = 384   # all-MiniLM-L6-v2 ile uyumlu, diğer config'lerdeki varsayılanla tutarlı olsun

@@ -47,7 +47,12 @@ def build_retriever_from_yaml(raw_config: dict[str, Any], embedder: Embedder) ->
         from .milvus_retriever import MilvusRetriever
 
         return MilvusRetriever(MilvusRetrieverConfig(**kwargs), embedder)
+    if rtype == "weaviate":
+        from .config import WeaviateRetrieverConfig
+        from .weaviate_retriever import WeaviateRetriever
+
+        return WeaviateRetriever(WeaviateRetrieverConfig(**kwargs), embedder)
     raise ValueError(
-        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss, milvus."
+        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss, milvus, weaviate."
     )
 

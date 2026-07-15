@@ -44,9 +44,11 @@ from src.evaluators.config import RetrievalEvaluatorConfig
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.retrievers.chroma_retriever import ChromaRetriever
 from src.retrievers.elasticsearch_retriever import ElasticSearchRetriever
+from src.retrievers.weaviate_retriever import WeaviateRetriever
 from src.retrievers.config import (
     ChromaRetrieverConfig,
     ElasticSearchRetrieverConfig,
+    WeaviateRetrieverConfig,
     QdrantRetrieverConfig,
     FAISSRetrieverConfig,
     MilvusRetrieverConfig,
@@ -257,6 +259,7 @@ def run_benchmark(
     faiss_cfg: FAISSRetrieverConfig,
     milvus_cfg: MilvusRetrieverConfig,
     elasticsearch_cfg: ElasticSearchRetrieverConfig,
+    weaviate_cfg: WeaviateRetrieverConfig,
     k_values: list[int],
     squad_version: str,
     show_progress: bool,
@@ -473,11 +476,46 @@ def run_benchmark(
     elasticsearch_mean = _mean_metrics(elasticsearch_rows)
     elasticsearch_recall = elasticsearch_mean.get(recall_key, float("nan"))
 
+    # --- Weaviate: persist + resource stats ---
+    weaviate = WeaviateRetriever(config=weaviate_cfg, embedder=embedder)
+    weaviate.clear()
+    t_widx0 = time.perf_counter()
+
+    def _weaviate_index() -> None:
+        weaviate.add_chunks(chunks, embeddings)
+
+    _, weaviate_index_stats = run_with_resource_stats(_weaviate_index)
+    weaviate_add_seconds = time.perf_counter() - t_widx0
+
+    # --- Retrieval + accuracy (Weaviate) ---
+    weaviate_latencies_ms: list[float] = []
+    weaviate_rows: list[dict[str, float]] = []
+
+    def _weaviate_retrieval_pass() -> None:
+        for q in tqdm(
+            bench_queries,
+            desc="Weaviate retrieval",
+            unit="q",
+            leave=False,
+            disable=not show_progress,
+        ):
+            t_r0 = time.perf_counter()
+            result = weaviate.retrieve(q, top_k=top_k)
+            weaviate_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
+            gt = set(ground_truth.get(q.id, set()))
+            weaviate_rows.append(evaluator.evaluate(result, gt))
+
+    _, weaviate_retrieval_stats = run_with_resource_stats(_weaviate_retrieval_pass)
+
+    weaviate_mean = _mean_metrics(weaviate_rows)
+    weaviate_recall = weaviate_mean.get(recall_key, float("nan"))
+
     avg_chroma_ms = _mean(chroma_latencies_ms)
     avg_qdrant_ms = _mean(qdrant_latencies_ms)
     avg_faiss_ms = _mean(faiss_latencies_ms)
     avg_milvus_ms = _mean(milvus_latencies_ms)
     avg_elasticsearch_ms = _mean(elasticsearch_latencies_ms)
+    avg_weaviate_ms = _mean(weaviate_latencies_ms)
 
     chroma_block = {
         "indexing": {
@@ -529,6 +567,16 @@ def run_benchmark(
             "cpu_percent": round(elasticsearch_retrieval_stats.avg_cpu_percent, 2),
         },
     }
+    weaviate_block = {
+        "indexing": {
+            "memory_usage_mb": round(weaviate_index_stats.peak_memory_mb, 3),
+            "cpu_percent": round(weaviate_index_stats.avg_cpu_percent, 2),
+        },
+        "retrieval": {
+            "memory_usage_mb": round(weaviate_retrieval_stats.peak_memory_mb, 3),
+            "cpu_percent": round(weaviate_retrieval_stats.avg_cpu_percent, 2),
+        },
+    }
 
     return {
         "squad_version": squad_version,
@@ -543,38 +591,45 @@ def run_benchmark(
         "faiss_add_seconds": faiss_add_seconds,
         "milvus_add_seconds": milvus_add_seconds,
         "elasticsearch_add_seconds": elasticsearch_add_seconds,
+        "weaviate_add_seconds": weaviate_add_seconds,
         "chroma_indexing_total_seconds": embedding_seconds + chroma_add_seconds,
         "qdrant_indexing_total_seconds": embedding_seconds + qdrant_add_seconds,
         "faiss_indexing_total_seconds": embedding_seconds + faiss_add_seconds,
         "milvus_indexing_total_seconds": embedding_seconds + milvus_add_seconds,
         "elasticsearch_indexing_total_seconds": embedding_seconds + elasticsearch_add_seconds,
+        "weaviate_indexing_total_seconds": embedding_seconds + weaviate_add_seconds,
         "retrieval_avg_ms_chroma": avg_chroma_ms,
         "retrieval_avg_ms_qdrant": avg_qdrant_ms,
         "retrieval_avg_ms_faiss": avg_faiss_ms,
         "retrieval_avg_ms_milvus": avg_milvus_ms,
         "retrieval_avg_ms_elasticsearch": avg_elasticsearch_ms,
+        "retrieval_avg_ms_weaviate": avg_weaviate_ms,
         "recall_at_k_metric": recall_key,
         "mean_recall_chroma": chroma_recall,
         "mean_recall_qdrant": qdrant_recall,
         "mean_recall_faiss": faiss_recall,
         "mean_recall_milvus": milvus_recall,
         "mean_recall_elasticsearch": elasticsearch_recall,
+        "mean_recall_weaviate": weaviate_recall,
         "mean_metrics_chroma": chroma_mean,
         "mean_metrics_qdrant": qdrant_mean,
         "mean_metrics_faiss": faiss_mean,
         "mean_metrics_milvus": milvus_mean,
         "mean_metrics_elasticsearch": elasticsearch_mean,
+        "mean_metrics_weaviate": weaviate_mean,
         "chroma": chroma_block,
         "qdrant": qdrant_block,
         "faiss": faiss_block,
         "milvus": milvus_block,
         "elasticsearch": elasticsearch_block,
+        "weaviate": weaviate_block,
         "winner_faster_retrieval": _winner_speed_multi({
             "ChromaDB": avg_chroma_ms,
             "Qdrant": avg_qdrant_ms,
             "FAISS": avg_faiss_ms,
             "Milvus": avg_milvus_ms,
             "ElasticSearch": avg_elasticsearch_ms,
+            "Weaviate": avg_weaviate_ms,
         }),
         "winner_higher_recall": _winner_recall_multi({
             "ChromaDB": chroma_recall,
@@ -582,6 +637,7 @@ def run_benchmark(
             "FAISS": faiss_recall,
             "Milvus": milvus_recall,
             "ElasticSearch": elasticsearch_recall,
+            "Weaviate": weaviate_recall,
         }),
     }
 
@@ -593,22 +649,27 @@ def _print_table(report: dict[str, Any]) -> None:
     fa = report["faiss"]
     mi = report["milvus"]
     es = report.get("elasticsearch")
+    wv = report.get("weaviate")
     es_idx_mem = es["indexing"]["memory_usage_mb"] if es else 0.0
     es_idx_cpu = es["indexing"]["cpu_percent"] if es else 0.0
     es_ret_mem = es["retrieval"]["memory_usage_mb"] if es else 0.0
     es_ret_cpu = es["retrieval"]["cpu_percent"] if es else 0.0
-    print("\n" + "=" * 145)
+    wv_idx_mem = wv["indexing"]["memory_usage_mb"] if wv else 0.0
+    wv_idx_cpu = wv["indexing"]["cpu_percent"] if wv else 0.0
+    wv_ret_mem = wv["retrieval"]["memory_usage_mb"] if wv else 0.0
+    wv_ret_cpu = wv["retrieval"]["cpu_percent"] if wv else 0.0
+    print("\n" + "=" * 165)
     print("VECTOR DB BENCHMARK (SQuAD — LLM devre dışı, sadece embed + retrieval)")
-    print("=" * 145)
+    print("=" * 165)
     print(
         f"Splits: {report.get('splits_used')}  |  "
         f"Döküman: {report['num_documents']}  |  "
         f"Chunk: {report['num_chunks']}  |  "
         f"Soru: {report['num_queries_evaluated']}  |  top_k={report['top_k']}"
     )
-    print("-" * 145)
-    print(f"{'Metrik':<50} | {'ChromaDB':>16} | {'Qdrant':>16} | {'FAISS':>16} | {'Milvus':>16} | {'ElasticSearch':>16}")
-    print("-" * 145)
+    print("-" * 165)
+    print(f"{'Metrik':<50} | {'ChromaDB':>16} | {'Qdrant':>16} | {'FAISS':>16} | {'Milvus':>16} | {'ElasticSearch':>16} | {'Weaviate':>16}")
+    print("-" * 165)
     print(
         f"{'İndeksleme: embedding (ortak, tek geçiş) [s]':<50} | "
         f"{report['embedding_seconds']:16.3f} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16}"
@@ -621,12 +682,12 @@ def _print_table(report: dict[str, Any]) -> None:
     print(
         f"{'İndeksleme: peak RAM (RSS) [MB]':<50} | "
         f"{ch['indexing']['memory_usage_mb']:16.3f} | {qd['indexing']['memory_usage_mb']:16.3f} | "
-        f"{fa['indexing']['memory_usage_mb']:16.3f} | {mi['indexing']['memory_usage_mb']:16.3f} | {es_idx_mem:16.3f}"
+        f"{fa['indexing']['memory_usage_mb']:16.3f} | {mi['indexing']['memory_usage_mb']:16.3f} | {es_idx_mem:16.3f} | {wv_idx_mem:16.3f}"
     )
     print(
         f"{'İndeksleme: ort. CPU [%]':<50} | "
         f"{ch['indexing']['cpu_percent']:16.2f} | {qd['indexing']['cpu_percent']:16.2f} | "
-        f"{fa['indexing']['cpu_percent']:16.2f} | {mi['indexing']['cpu_percent']:16.2f} | {es_idx_cpu:16.2f}"
+        f"{fa['indexing']['cpu_percent']:16.2f} | {mi['indexing']['cpu_percent']:16.2f} | {es_idx_cpu:16.2f} | {wv_idx_cpu:16.2f}"
     )
     print(
         f"{'İndeksleme: toplam (embedding + bu DB) [s]':<50} | "
@@ -643,19 +704,19 @@ def _print_table(report: dict[str, Any]) -> None:
     print(
         f"{'Retrieval: peak RAM (RSS) [MB]':<50} | "
         f"{ch['retrieval']['memory_usage_mb']:16.3f} | {qd['retrieval']['memory_usage_mb']:16.3f} | "
-        f"{fa['retrieval']['memory_usage_mb']:16.3f} | {mi['retrieval']['memory_usage_mb']:16.3f} | {es_ret_mem:16.3f}"
+        f"{fa['retrieval']['memory_usage_mb']:16.3f} | {mi['retrieval']['memory_usage_mb']:16.3f} | {es_ret_mem:16.3f} | {wv_ret_mem:16.3f}"
     )
     print(
         f"{'Retrieval: ort. CPU [%]':<50} | "
         f"{ch['retrieval']['cpu_percent']:16.2f} | {qd['retrieval']['cpu_percent']:16.2f} | "
-        f"{fa['retrieval']['cpu_percent']:16.2f} | {mi['retrieval']['cpu_percent']:16.2f} | {es_ret_cpu:16.2f}"
+        f"{fa['retrieval']['cpu_percent']:16.2f} | {mi['retrieval']['cpu_percent']:16.2f} | {es_ret_cpu:16.2f} | {wv_ret_cpu:16.2f}"
     )
     print(
         f"{('Ortalama ' + ck):<50} | "
         f"{report['mean_recall_chroma']:16.4f} | {report['mean_recall_qdrant']:16.4f} | "
         f"{report['mean_recall_faiss']:16.4f} | {report['mean_recall_milvus']:16.4f} | {report.get('mean_recall_elasticsearch', float('nan')):16.4f}"
     )
-    print("-" * 145)
+    print("-" * 165)
     print(
         f"Daha hızlı retrieval: {report['winner_faster_retrieval']}  |  "
         f"Daha yüksek {ck}: {report['winner_higher_recall']}"
@@ -672,7 +733,7 @@ def main() -> None:
         type=str,
         default=None,
         help="İsteğe bağlı YAML (chunker, embedder, evaluator, pipeline, "
-        "chroma_retriever, qdrant_retriever, faiss_retriever, milvus_retriever, elasticsearch_retriever).",
+        "chroma_retriever, qdrant_retriever, faiss_retriever, milvus_retriever, elasticsearch_retriever, weaviate_retriever).",
     )
     parser.add_argument("--num-documents", type=int, default=1000)
     parser.add_argument("--num-queries", type=int, default=100)
@@ -701,11 +762,13 @@ def main() -> None:
         faiss_dict = {k: v for k, v in raw.get("faiss_retriever", {}).items() if k != "type"}
         milvus_dict = {k: v for k, v in raw.get("milvus_retriever", {}).items() if k != "type"}
         elasticsearch_dict = {k: v for k, v in raw.get("elasticsearch_retriever", {}).items() if k != "type"}
+        weaviate_dict = {k: v for k, v in raw.get("weaviate_retriever", {}).items() if k != "type"}
         chroma_cfg = ChromaRetrieverConfig(**chroma_dict) if chroma_dict else ChromaRetrieverConfig()
         qdrant_cfg = QdrantRetrieverConfig(**qdrant_dict) if qdrant_dict else QdrantRetrieverConfig()
         faiss_cfg = FAISSRetrieverConfig(**faiss_dict) if faiss_dict else FAISSRetrieverConfig()
         milvus_cfg = MilvusRetrieverConfig(**milvus_dict) if milvus_dict else MilvusRetrieverConfig(in_memory=True)
         elasticsearch_cfg = ElasticSearchRetrieverConfig(**elasticsearch_dict) if elasticsearch_dict else ElasticSearchRetrieverConfig()
+        weaviate_cfg = WeaviateRetrieverConfig(**weaviate_dict) if weaviate_dict else WeaviateRetrieverConfig()
     else:
         chunker_cfg = FixedSizeChunkerConfig()
         embedder_cfg = SentenceTransformersEmbedderConfig()
@@ -721,6 +784,7 @@ def main() -> None:
             in_memory=True,
         )
         elasticsearch_cfg = ElasticSearchRetrieverConfig(index_name="bench_elasticsearch_squad")
+        weaviate_cfg = WeaviateRetrieverConfig(collection_name="bench_weaviate_squad")
 
     top_k = args.top_k
     report = run_benchmark(
@@ -734,6 +798,7 @@ def main() -> None:
         faiss_cfg=faiss_cfg,
         milvus_cfg=milvus_cfg,
         elasticsearch_cfg=elasticsearch_cfg,
+        weaviate_cfg=weaviate_cfg,
         k_values=k_values,
         squad_version=args.squad_version,
         show_progress=not args.no_progress,
