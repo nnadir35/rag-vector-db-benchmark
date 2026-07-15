@@ -4,7 +4,7 @@ from .base import BaseEmbedder, EmbeddingDTO
 class BGEM3Embedder(BaseEmbedder):
     """Local embedding implementation using the BGE-m3 model via HuggingFace."""
 
-    def __init__(self, model_name: str = "BAAI/bge-m3", device: str = "cpu") -> None:
+    def __init__(self, model_name: str = "BAAI/bge-m3", device: str = "mps") -> None:
         self.model_name = model_name
         self.device = device
         self._model = None

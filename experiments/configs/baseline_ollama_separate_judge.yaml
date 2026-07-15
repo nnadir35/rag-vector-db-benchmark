@@ -14,7 +14,7 @@ chunker:
 
 embedder:
   model_name: "all-MiniLM-L6-v2"
-  device: "cpu"
+  device: "mps"
   batch_size: 32
   normalize_embeddings: true
 

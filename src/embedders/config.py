@@ -15,7 +15,7 @@ class SentenceTransformersEmbedderConfig:
     """
 
     model_name: str = field(default="all-MiniLM-L6-v2")
-    device: str = field(default="cpu")
+    device: str = field(default="mps")
     batch_size: int = field(default=32)
     normalize_embeddings: bool = field(default=True)
 
