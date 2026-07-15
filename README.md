@@ -12,11 +12,11 @@ This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipeli
 
 ## Real Benchmark Results (SQuAD v2 · 100 queries)
 
-| Metric | Score | What it means |
-|---|---|---|
-| MRR | **0.707** | On average, the correct answer is ranked 1st or 2nd |
-| Precision@1 | **0.610** | 61% of top results are directly relevant |
-| Recall@3 | **0.820** | 82% of relevant documents found in top 3 results |
+| Metric      | Score     | What it means                                       |
+| ----------- | --------- | --------------------------------------------------- |
+| MRR         | **0.707** | On average, the correct answer is ranked 1st or 2nd |
+| Precision@1 | **0.610** | 61% of top results are directly relevant            |
+| Recall@3    | **0.820** | 82% of relevant documents found in top 3 results    |
 
 *Not: Tablodaki sonuçlar `experiments/results/20260307_051139_baseline_ollama_squad.json` test çalışmasından alınmıştır.*
 
@@ -95,46 +95,39 @@ This framework addresses these challenges by enforcing strict separation of conc
 
 ## RAG Pipeline Overview
 
-The framework models RAG systems as a composition of three distinct, interchangeable components:
+Think of the RAG system as a team of three specialists working together to answer a question. This framework keeps them strictly separated so you can measure exactly who is doing a good job and who is failing.
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Retriever  │────▶│   Generator  │────▶│  Response   │
-│  (Vector DB │     │     (LLM)    │     │             │
-│  + Embed)   │     │              │     │             │
-└─────────────┘     └──────────────┘     └─────────────┘
-       │                    │
-       │                    │
-       ▼                    ▼
-┌─────────────┐     ┌──────────────┐
-│  Retrieval  │     │  Generation  │
-│  Evaluator  │     │  Evaluator   │
-└─────────────┘     └──────────────┘
+```mermaid
+flowchart LR
+    Q[User Query] --> R[1. Retriever]
+    R -->|Finds Documents| G[2. Generator]
+    G -->|Writes Answer| A[Final Response]
+    
+    R -.->|How good are the docs?| RE[Retrieval Evaluator]
+    G -.->|How good is the answer?| GE[Generation Evaluator]
 ```
 
-### Component Responsibilities
+### 🧩 The Three Specialists (Components)
 
-**Retriever**
-- Accepts a query and returns ranked document chunks
-- Encapsulates vector database, embedding model, and retrieval logic
-- Evaluated independently on retrieval-specific metrics
+**1. The Librarian (Retriever)**
+- **What it does:** Takes your question and searches the database for relevant text chunks.
+- **What it contains:** The Vector Database (like Chroma or Pinecone) and the Embedding Model.
+- **How it's graded:** Did it find the right documents? (Metrics: MRR, Precision, Recall)
 
-**Generator**
-- Accepts a query and retrieved context, produces a response
-- Encapsulates LLM, prompt template, and generation parameters
-- Evaluated independently on generation-specific metrics
+**2. The Writer (Generator)**
+- **What it does:** Reads the documents found by the Librarian and writes a coherent answer to your question.
+- **What it contains:** The LLM (like GPT-4 or Llama 3) and the Prompt Template.
+- **How it's graded:** Is the answer based *only* on the documents? Is it helpful? (Metrics: Faithfulness, Relevance)
 
-**Evaluator**
-- Measures component performance using standardized metrics
-- Operates independently of pipeline execution
-- Produces reproducible, comparable results
+**3. The Judge (Evaluator)**
+- **What it does:** Gives a score to the Librarian and the Writer separately.
+- **Why it matters:** If the final answer is wrong, the Judge tells you if it's because the Librarian didn't find the right document, or because the Writer misunderstood the document.
 
-### Design Principles
+### 📐 Core Design Principles
 
-- **Interface-first**: Components communicate through well-defined interfaces, enabling plug-and-play experimentation
-- **Separation of concerns**: Retrieval logic never knows about generation, and vice versa
-- **No benchmarking leakage**: Evaluation logic is isolated from pipeline execution
-- **Full configurability**: No hardcoded models, prompts, or database choices
+- **Plug-and-Play:** You can swap the Librarian (e.g., Pinecone to FAISS) or the Writer (e.g., OpenAI to local Ollama) by changing just one line in a configuration file.
+- **Total Isolation:** The Librarian doesn't know the Writer exists. This guarantees our tests are fair and unbiased.
+- **No Hardcoding:** Every single parameter (model name, chunk size, temperature) is controlled via config files.
 
 ## Evaluation Philosophy
 

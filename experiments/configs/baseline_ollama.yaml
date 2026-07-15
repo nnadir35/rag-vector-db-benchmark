@@ -3,7 +3,7 @@ experiment:
 
 dataset:
   split: "validation"
-  max_samples: 5
+  max_samples: 100
   version: "squad_v2"
 
 chunker:
