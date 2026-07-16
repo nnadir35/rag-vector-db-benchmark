@@ -1,0 +1,190 @@
+{
+  "timestamp": "20260716_030849",
+  "config_path": "/Users/mintmaint/projects/rag-vector-db-benchmark/experiments/configs/benchmark_all_dbs.yaml",
+  "squad_version": "squad_v2",
+  "splits_used": [
+    "validation"
+  ],
+  "num_documents": 100,
+  "num_chunks": 170,
+  "num_queries_evaluated": 20,
+  "top_k": 10,
+  "embedding_seconds": 7.381773417000659,
+  "chroma_add_seconds": 0.6044881659981911,
+  "qdrant_add_seconds": 1.3398557499967865,
+  "faiss_add_seconds": 0.006872958998428658,
+  "milvus_add_seconds": 0.6547121249968768,
+  "elasticsearch_add_seconds": 0.36817504200007534,
+  "weaviate_add_seconds": 0.001745665998896584,
+  "chroma_indexing_total_seconds": 7.98626158299885,
+  "qdrant_indexing_total_seconds": 8.721629166997445,
+  "faiss_indexing_total_seconds": 7.3886463759990875,
+  "milvus_indexing_total_seconds": 8.036485541997536,
+  "elasticsearch_indexing_total_seconds": 7.749948459000734,
+  "weaviate_indexing_total_seconds": 7.383519082999555,
+  "retrieval_avg_ms_chroma": 56.41493119983352,
+  "retrieval_avg_ms_qdrant": 68.48773554920626,
+  "retrieval_avg_ms_faiss": 20.57282925088657,
+  "retrieval_avg_ms_milvus": 65.83596660057083,
+  "retrieval_avg_ms_elasticsearch": 24.8641542999394,
+  "retrieval_avg_ms_weaviate": 15.211358300075517,
+  "recall_at_k_metric": "recall@10",
+  "mean_recall_chroma": 1.0,
+  "mean_recall_qdrant": 1.0,
+  "mean_recall_faiss": 1.0,
+  "mean_recall_milvus": 1.0,
+  "mean_recall_elasticsearch": 1.0,
+  "mean_recall_weaviate": 1.0,
+  "mean_metrics_chroma": {
+    "mrr": 0.6013690476190476,
+    "precision@1": 0.45,
+    "recall@1": 0.45,
+    "ndcg@1": 0.45,
+    "precision@3": 0.2333333333333333,
+    "recall@3": 0.7,
+    "ndcg@3": 0.5880929753571458,
+    "precision@5": 0.16,
+    "recall@5": 0.8,
+    "ndcg@5": 0.6289694436225425,
+    "precision@10": 0.12299603174603173,
+    "recall@10": 1.0,
+    "ndcg@10": 0.6958863801505634
+  },
+  "mean_metrics_qdrant": {
+    "mrr": 0.6013690476190476,
+    "precision@1": 0.45,
+    "recall@1": 0.45,
+    "ndcg@1": 0.45,
+    "precision@3": 0.2333333333333333,
+    "recall@3": 0.7,
+    "ndcg@3": 0.5880929753571458,
+    "precision@5": 0.16,
+    "recall@5": 0.8,
+    "ndcg@5": 0.6289694436225425,
+    "precision@10": 0.12299603174603173,
+    "recall@10": 1.0,
+    "ndcg@10": 0.6958863801505634
+  },
+  "mean_metrics_faiss": {
+    "mrr": 0.6013690476190476,
+    "precision@1": 0.45,
+    "recall@1": 0.45,
+    "ndcg@1": 0.45,
+    "precision@3": 0.2333333333333333,
+    "recall@3": 0.7,
+    "ndcg@3": 0.5880929753571458,
+    "precision@5": 0.16,
+    "recall@5": 0.8,
+    "ndcg@5": 0.6289694436225425,
+    "precision@10": 0.12299603174603173,
+    "recall@10": 1.0,
+    "ndcg@10": 0.6958863801505634
+  },
+  "mean_metrics_milvus": {
+    "mrr": 0.6013690476190476,
+    "precision@1": 0.45,
+    "recall@1": 0.45,
+    "ndcg@1": 0.45,
+    "precision@3": 0.2333333333333333,
+    "recall@3": 0.7,
+    "ndcg@3": 0.5880929753571458,
+    "precision@5": 0.16,
+    "recall@5": 0.8,
+    "ndcg@5": 0.6289694436225425,
+    "precision@10": 0.12299603174603173,
+    "recall@10": 1.0,
+    "ndcg@10": 0.6958863801505634
+  },
+  "mean_metrics_elasticsearch": {
+    "mrr": 0.6013690476190476,
+    "precision@1": 0.45,
+    "recall@1": 0.45,
+    "ndcg@1": 0.45,
+    "precision@3": 0.2333333333333333,
+    "recall@3": 0.7,
+    "ndcg@3": 0.5880929753571458,
+    "precision@5": 0.16,
+    "recall@5": 0.8,
+    "ndcg@5": 0.6289694436225425,
+    "precision@10": 0.12299603174603173,
+    "recall@10": 1.0,
+    "ndcg@10": 0.6958863801505634
+  },
+  "mean_metrics_weaviate": {
+    "mrr": 0.6013690476190476,
+    "precision@1": 0.45,
+    "recall@1": 0.45,
+    "ndcg@1": 0.45,
+    "precision@3": 0.2333333333333333,
+    "recall@3": 0.7,
+    "ndcg@3": 0.5880929753571458,
+    "precision@5": 0.16,
+    "recall@5": 0.8,
+    "ndcg@5": 0.6289694436225425,
+    "precision@10": 0.12299603174603173,
+    "recall@10": 1.0,
+    "ndcg@10": 0.6958863801505634
+  },
+  "chroma": {
+    "indexing": {
+      "memory_usage_mb": 512.859,
+      "cpu_percent": 9.43
+    },
+    "retrieval": {
+      "memory_usage_mb": 421.516,
+      "cpu_percent": 8.81
+    }
+  },
+  "qdrant": {
+    "indexing": {
+      "memory_usage_mb": 550.797,
+      "cpu_percent": 10.96
+    },
+    "retrieval": {
+      "memory_usage_mb": 550.641,
+      "cpu_percent": 51.62
+    }
+  },
+  "faiss": {
+    "indexing": {
+      "memory_usage_mb": 373.312,
+      "cpu_percent": 12.74
+    },
+    "retrieval": {
+      "memory_usage_mb": 377.672,
+      "cpu_percent": 46.69
+    }
+  },
+  "milvus": {
+    "indexing": {
+      "memory_usage_mb": 400.391,
+      "cpu_percent": 2.96
+    },
+    "retrieval": {
+      "memory_usage_mb": 387.359,
+      "cpu_percent": 67.21
+    }
+  },
+  "elasticsearch": {
+    "indexing": {
+      "memory_usage_mb": 581.188,
+      "cpu_percent": 4.94
+    },
+    "retrieval": {
+      "memory_usage_mb": 587.812,
+      "cpu_percent": 5.98
+    }
+  },
+  "weaviate": {
+    "indexing": {
+      "memory_usage_mb": 592.297,
+      "cpu_percent": 11.64
+    },
+    "retrieval": {
+      "memory_usage_mb": 592.422,
+      "cpu_percent": 10.46
+    }
+  },
+  "winner_faster_retrieval": "Weaviate",
+  "winner_higher_recall": "ChromaDB"
+}

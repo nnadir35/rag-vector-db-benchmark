@@ -78,12 +78,17 @@ class ElasticSearchRetriever(Retriever):
         if Elasticsearch is None or bulk is None:
             try:
                 from elasticsearch import Elasticsearch as ES
+                from elasticsearch import __version__ as es_version
                 from elasticsearch.helpers import bulk as es_bulk
             except ImportError as exc:
                 raise ImportError(
-                    "elasticsearch>=9.1.3 is required for ElasticSearchRetriever. "
-                    "Install it with: pip install 'elasticsearch>=9.1.3'"
+                    "elasticsearch>=8.12.0 is required for ElasticSearchRetriever. "
+                    "Install it with: pip install 'elasticsearch>=8.12.0'"
                 ) from exc
+            if es_version < (8, 12, 0):
+                raise ImportError(
+                    "elasticsearch>=8.12.0 is required for ElasticSearchRetriever. Install it with: pip install 'elasticsearch>=8.12.0'"
+                )
             Elasticsearch = ES
             bulk = es_bulk
 
@@ -95,7 +100,7 @@ class ElasticSearchRetriever(Retriever):
         """
         if self._client is None:
             self._ensure_es_imported()
-            self._client = Elasticsearch([self._config.host])
+            self._client = Elasticsearch([self._config.host], request_timeout=300.0)
         return self._client
 
     # ---------------------------------------------------------------------
@@ -194,9 +199,10 @@ class ElasticSearchRetriever(Retriever):
             actions.append({"_index": self._config.index_name, "_source": doc})
         # ``bulk`` returns a tuple (successes, errors).  Errors are raised as an
         # exception for visibility.
-        success, errors = bulk(client, actions)
+        success, errors = bulk(client, actions, request_timeout=300.0)
         if errors:
             raise RuntimeError(f"Elasticsearch bulk indexing errors: {errors}")
+        client.indices.refresh(index=self._config.index_name)
 
     def retrieve(self, query: Query, top_k: int = 10) -> RetrievalResult:
         """Embed ``query`` using the configured ``embedder`` and delegate.
@@ -251,10 +257,10 @@ class ElasticSearchRetriever(Retriever):
         knn_query = {
             "size": top_k,
             "knn": {
-                "embedding": {
-                    "vector": list(query_embedding.vector),
-                    "k": top_k,
-                }
+                "field": "embedding",
+                "query_vector": list(query_embedding.vector),
+                "k": top_k,
+                "num_candidates": 100
             },
             "_source": ["id", "content", "document_id", "chunk_index", "start_char", "end_char", "custom"],
         }

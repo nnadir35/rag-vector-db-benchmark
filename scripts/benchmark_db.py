@@ -672,12 +672,12 @@ def _print_table(report: dict[str, Any]) -> None:
     print("-" * 165)
     print(
         f"{'İndeksleme: embedding (ortak, tek geçiş) [s]':<50} | "
-        f"{report['embedding_seconds']:16.3f} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16}"
+        f"{report['embedding_seconds']:16.3f} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16}"
     )
     print(
         f"{'İndeksleme: DB yazma (add_chunks) [s]':<50} | "
         f"{report['chroma_add_seconds']:16.3f} | {report['qdrant_add_seconds']:16.3f} | "
-        f"{report['faiss_add_seconds']:16.3f} | {report['milvus_add_seconds']:16.3f} | {report.get('elasticsearch_add_seconds', 0.0):16.3f}"
+        f"{report['faiss_add_seconds']:16.3f} | {report['milvus_add_seconds']:16.3f} | {report.get('elasticsearch_add_seconds', 0.0):16.3f} | {report.get('weaviate_add_seconds', 0.0):16.3f}"
     )
     print(
         f"{'İndeksleme: peak RAM (RSS) [MB]':<50} | "
@@ -694,12 +694,12 @@ def _print_table(report: dict[str, Any]) -> None:
         f"{report['chroma_indexing_total_seconds']:16.3f} | "
         f"{report['qdrant_indexing_total_seconds']:16.3f} | "
         f"{report['faiss_indexing_total_seconds']:16.3f} | "
-        f"{report['milvus_indexing_total_seconds']:16.3f} | {report.get('elasticsearch_indexing_total_seconds', 0.0):16.3f}"
+        f"{report['milvus_indexing_total_seconds']:16.3f} | {report.get('elasticsearch_indexing_total_seconds', 0.0):16.3f} | {report.get('weaviate_indexing_total_seconds', 0.0):16.3f}"
     )
     print(
         f"{'Ortalama retrieval [ms] (sorgu embed + arama)':<50} | "
         f"{report['retrieval_avg_ms_chroma']:16.2f} | {report['retrieval_avg_ms_qdrant']:16.2f} | "
-        f"{report['retrieval_avg_ms_faiss']:16.2f} | {report['retrieval_avg_ms_milvus']:16.2f} | {report.get('retrieval_avg_ms_elasticsearch', 0.0):16.2f}"
+        f"{report['retrieval_avg_ms_faiss']:16.2f} | {report['retrieval_avg_ms_milvus']:16.2f} | {report.get('retrieval_avg_ms_elasticsearch', 0.0):16.2f} | {report.get('retrieval_avg_ms_weaviate', 0.0):16.2f}"
     )
     print(
         f"{'Retrieval: peak RAM (RSS) [MB]':<50} | "
@@ -714,7 +714,7 @@ def _print_table(report: dict[str, Any]) -> None:
     print(
         f"{('Ortalama ' + ck):<50} | "
         f"{report['mean_recall_chroma']:16.4f} | {report['mean_recall_qdrant']:16.4f} | "
-        f"{report['mean_recall_faiss']:16.4f} | {report['mean_recall_milvus']:16.4f} | {report.get('mean_recall_elasticsearch', float('nan')):16.4f}"
+        f"{report['mean_recall_faiss']:16.4f} | {report['mean_recall_milvus']:16.4f} | {report.get('mean_recall_elasticsearch', float('nan')):16.4f} | {report.get('mean_recall_weaviate', float('nan')):16.4f}"
     )
     print("-" * 165)
     print(
