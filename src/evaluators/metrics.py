@@ -172,3 +172,36 @@ def f1_score(prediction: str, gold_answers: list[str]) -> float:
         return f1
 
     return max(_get_f1(prediction, gold) for gold in gold_answers)
+
+
+def check_ocr_quality(text: str, language: str = "eng") -> dict:
+    """OCR kalite kontrol fonksiyonu.
+    
+    - Spaced-out character density: (\\b\\w\\s\\w\\s\\w\\b match count / total characters)
+    - German special character ratio: (ä, ö, ü, ß count / total characters)
+    - Flags if text is too short (< 50 chars).
+    """
+    total_chars = len(text)
+    if total_chars == 0:
+        return {"space_ratio": 0.0, "special_char_ratio": 0.0, "flag": True}
+        
+    spaced_matches = len(re.findall(r'\b\w\s\w\s\w\b', text))
+    space_ratio = spaced_matches / total_chars
+    
+    special_char_ratio = 0.0
+    flag = False
+    
+    if language == "deu":
+        special_chars = sum(1 for c in text if c in 'äöüßÄÖÜ')
+        special_char_ratio = special_chars / total_chars
+        if special_chars == 0:
+            flag = True
+            
+    if total_chars < 50:
+        flag = True
+        
+    return {
+        "space_ratio": space_ratio,
+        "special_char_ratio": special_char_ratio,
+        "flag": flag
+    }
