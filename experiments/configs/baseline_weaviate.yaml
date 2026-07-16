@@ -20,7 +20,7 @@ retriever:
   type: "weaviate"
   collection_name: "weaviate_squad_bench"
   distance_metric: "cosine"
-  in_memory: true
+  in_memory: false
 
 generator:
   model_name: "ollama/llama3:8b"

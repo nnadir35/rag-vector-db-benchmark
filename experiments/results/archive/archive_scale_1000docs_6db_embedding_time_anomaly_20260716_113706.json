@@ -1,0 +1,190 @@
+{
+  "timestamp": "20260716_113706",
+  "config_path": "/Users/mintmaint/projects/rag-vector-db-benchmark/experiments/configs/benchmark_all_dbs.yaml",
+  "squad_version": "squad_v2",
+  "splits_used": [
+    "validation"
+  ],
+  "num_documents": 1000,
+  "num_chunks": 2211,
+  "num_queries_evaluated": 100,
+  "top_k": 10,
+  "embedding_seconds": 728.1087213330029,
+  "chroma_add_seconds": 2.569837582996115,
+  "qdrant_add_seconds": 1.3980865000048652,
+  "faiss_add_seconds": 0.029533790991990827,
+  "milvus_add_seconds": 0.9770480000006501,
+  "elasticsearch_add_seconds": 2.2541741249879124,
+  "weaviate_add_seconds": 0.018812166003044695,
+  "chroma_indexing_total_seconds": 730.678558915999,
+  "qdrant_indexing_total_seconds": 729.5068078330078,
+  "faiss_indexing_total_seconds": 728.1382551239949,
+  "milvus_indexing_total_seconds": 729.0857693330036,
+  "elasticsearch_indexing_total_seconds": 730.3628954579908,
+  "weaviate_indexing_total_seconds": 728.127533499006,
+  "retrieval_avg_ms_chroma": 28.260007130156737,
+  "retrieval_avg_ms_qdrant": 27.867055429669563,
+  "retrieval_avg_ms_faiss": 9.767796618980356,
+  "retrieval_avg_ms_milvus": 329.43216710031265,
+  "retrieval_avg_ms_elasticsearch": 22.53287699073553,
+  "retrieval_avg_ms_weaviate": 17.410554591333494,
+  "recall_at_k_metric": "recall@10",
+  "mean_recall_chroma": 0.83,
+  "mean_recall_qdrant": 0.83,
+  "mean_recall_faiss": 0.83,
+  "mean_recall_milvus": 0.83,
+  "mean_recall_elasticsearch": 0.83,
+  "mean_recall_weaviate": 0.83,
+  "mean_metrics_chroma": {
+    "mrr": 0.6261904761904762,
+    "precision@1": 0.51,
+    "recall@1": 0.51,
+    "ndcg@1": 0.51,
+    "precision@3": 0.23666666666666664,
+    "recall@3": 0.71,
+    "ndcg@3": 0.6296394630357187,
+    "precision@5": 0.154,
+    "recall@5": 0.77,
+    "ndcg@5": 0.6554800565201222,
+    "precision@10": 0.10002380952380951,
+    "recall@10": 0.83,
+    "ndcg@10": 0.6763950106711097
+  },
+  "mean_metrics_qdrant": {
+    "mrr": 0.6261904761904762,
+    "precision@1": 0.51,
+    "recall@1": 0.51,
+    "ndcg@1": 0.51,
+    "precision@3": 0.23666666666666664,
+    "recall@3": 0.71,
+    "ndcg@3": 0.6296394630357187,
+    "precision@5": 0.154,
+    "recall@5": 0.77,
+    "ndcg@5": 0.6554800565201222,
+    "precision@10": 0.10002380952380951,
+    "recall@10": 0.83,
+    "ndcg@10": 0.6763950106711097
+  },
+  "mean_metrics_faiss": {
+    "mrr": 0.6261904761904762,
+    "precision@1": 0.51,
+    "recall@1": 0.51,
+    "ndcg@1": 0.51,
+    "precision@3": 0.23666666666666664,
+    "recall@3": 0.71,
+    "ndcg@3": 0.6296394630357187,
+    "precision@5": 0.154,
+    "recall@5": 0.77,
+    "ndcg@5": 0.6554800565201222,
+    "precision@10": 0.10002380952380951,
+    "recall@10": 0.83,
+    "ndcg@10": 0.6763950106711097
+  },
+  "mean_metrics_milvus": {
+    "mrr": 0.6261904761904762,
+    "precision@1": 0.51,
+    "recall@1": 0.51,
+    "ndcg@1": 0.51,
+    "precision@3": 0.23666666666666664,
+    "recall@3": 0.71,
+    "ndcg@3": 0.6296394630357187,
+    "precision@5": 0.154,
+    "recall@5": 0.77,
+    "ndcg@5": 0.6554800565201222,
+    "precision@10": 0.10002380952380951,
+    "recall@10": 0.83,
+    "ndcg@10": 0.6763950106711097
+  },
+  "mean_metrics_elasticsearch": {
+    "mrr": 0.6261904761904762,
+    "precision@1": 0.51,
+    "recall@1": 0.51,
+    "ndcg@1": 0.51,
+    "precision@3": 0.23666666666666664,
+    "recall@3": 0.71,
+    "ndcg@3": 0.6296394630357187,
+    "precision@5": 0.154,
+    "recall@5": 0.77,
+    "ndcg@5": 0.6554800565201222,
+    "precision@10": 0.10002380952380951,
+    "recall@10": 0.83,
+    "ndcg@10": 0.6763950106711097
+  },
+  "mean_metrics_weaviate": {
+    "mrr": 0.6261904761904762,
+    "precision@1": 0.51,
+    "recall@1": 0.51,
+    "ndcg@1": 0.51,
+    "precision@3": 0.23666666666666664,
+    "recall@3": 0.71,
+    "ndcg@3": 0.6296394630357187,
+    "precision@5": 0.154,
+    "recall@5": 0.77,
+    "ndcg@5": 0.6554800565201222,
+    "precision@10": 0.10002380952380951,
+    "recall@10": 0.83,
+    "ndcg@10": 0.6763950106711097
+  },
+  "chroma": {
+    "indexing": {
+      "memory_usage_mb": 545.5,
+      "cpu_percent": 14.21
+    },
+    "retrieval": {
+      "memory_usage_mb": 531.984,
+      "cpu_percent": 9.11
+    }
+  },
+  "qdrant": {
+    "indexing": {
+      "memory_usage_mb": 728.125,
+      "cpu_percent": 11.75
+    },
+    "retrieval": {
+      "memory_usage_mb": 803.25,
+      "cpu_percent": 83.45
+    }
+  },
+  "faiss": {
+    "indexing": {
+      "memory_usage_mb": 718.828,
+      "cpu_percent": 12.24
+    },
+    "retrieval": {
+      "memory_usage_mb": 719.703,
+      "cpu_percent": 14.86
+    }
+  },
+  "milvus": {
+    "indexing": {
+      "memory_usage_mb": 794.453,
+      "cpu_percent": 5.12
+    },
+    "retrieval": {
+      "memory_usage_mb": 812.797,
+      "cpu_percent": 70.81
+    }
+  },
+  "elasticsearch": {
+    "indexing": {
+      "memory_usage_mb": 400.891,
+      "cpu_percent": 2.95
+    },
+    "retrieval": {
+      "memory_usage_mb": 451.719,
+      "cpu_percent": 6.93
+    }
+  },
+  "weaviate": {
+    "indexing": {
+      "memory_usage_mb": 446.359,
+      "cpu_percent": 16.04
+    },
+    "retrieval": {
+      "memory_usage_mb": 448.281,
+      "cpu_percent": 11.7
+    }
+  },
+  "winner_faster_retrieval": "FAISS",
+  "winner_higher_recall": "ChromaDB"
+}

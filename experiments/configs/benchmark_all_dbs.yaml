@@ -36,7 +36,7 @@ faiss_retriever:
 milvus_retriever:
   collection_name: "bench_milvus_squad"
   distance_metric: "cosine"
-  in_memory: true
+  in_memory: false
 
 elasticsearch_retriever:
   # Requires docker-compose up elasticsearch for in_memory: false
@@ -48,4 +48,4 @@ elasticsearch_retriever:
 weaviate_retriever:
   collection_name: "bench_weaviate_squad"
   distance_metric: "cosine"
-  in_memory: true
+  in_memory: false

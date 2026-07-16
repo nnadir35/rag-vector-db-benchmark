@@ -206,6 +206,12 @@ class MilvusRetriever(Retriever):
                 })
 
             client.insert(collection_name=self._config.collection_name, data=entities)
+            
+            # Flush and load to ensure inserted data is immediately searchable
+            if hasattr(client, "flush"):
+                client.flush(collection_name=self._config.collection_name)
+            client.load_collection(collection_name=self._config.collection_name)
+            
             self._next_id += len(chunks)
             self._collection_ready = True
 
