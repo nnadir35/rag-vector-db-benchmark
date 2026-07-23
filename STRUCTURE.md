@@ -29,7 +29,8 @@ rag-vector-db-benchmark/
 **Responsibility**: Define abstract interfaces, base types, and shared data structures that establish contracts between components.
 
 **What belongs here**:
-- Abstract base classes/interfaces for `Retriever`, `Generator`, `Evaluator`
+- Abstract base classes/interfaces for `Retriever`, `Generator`, `Evaluator`, and
+  `DatasetLoader` (`dataset.py` — `load`, `load_documents`, `load_gold_answers`)
 - Core data types (Query, Document, RetrievalResult, GenerationResult, etc.)
 - Metric definitions and interfaces
 - Registry interfaces for component discovery
@@ -50,7 +51,17 @@ rag-vector-db-benchmark/
 **Responsibility**: Implement retrieval components that query vector databases and return ranked document chunks.
 
 **What belongs here**:
-- Concrete retriever implementations (ChromaRetriever, QdrantRetriever, FAISSRetriever, MilvusRetriever, PineconeRetriever, ElasticSearchRetriever; e.g., WeaviateRetriever)
+- Concrete retriever implementations, all present in `src/retrievers/`:
+  - `chroma_retriever.py` — always a real ChromaDB client, no `in_memory` option
+  - `qdrant_retriever.py` — `in_memory=True`: real Qdrant engine, RAM-only; `False`: Docker service
+  - `faiss_retriever.py` — always in-process, no `in_memory` option
+  - `milvus_retriever.py` — `in_memory=True`: **Milvus Lite** (embedded, ~10x slower, not
+    representative of production); `False`: real Milvus server (Docker)
+  - `elasticsearch_retriever.py` — `in_memory=True`: **mock** (dict + NumPy cosine, no real ES
+    code runs); `False`: real Elasticsearch server (Docker, port 9200)
+  - `weaviate_retriever.py` — `in_memory=True`: **mock** (same NumPy cosine approach as ES);
+    `False`: real Weaviate server (Docker, port 8080)
+  - `pinecone_retriever.py` — adapter exists but is not part of the systematic benchmark (managed-only SaaS)
 - Retriever-specific configuration classes
 - Embedding model wrappers used by retrievers
 - Vector database client abstractions
@@ -94,8 +105,11 @@ rag-vector-db-benchmark/
 **Responsibility**: Implement evaluation logic that computes metrics for retrievers, generators, or the full pipeline.
 
 **What belongs here**:
-- Concrete evaluator implementations (e.g., `RetrievalEvaluator`, `GenerationEvaluator`)
-- Metric computation functions (precision, recall, faithfulness, etc.)
+- Concrete evaluator implementations: `retrieval_evaluator.py` (`RetrievalEvaluator`),
+  `generation_evaluator.py` (`GenerationEvaluator`, LLM-judge Faithfulness/Relevance), and
+  `answer_quality_evaluator.py` (`AnswerQualityEvaluator` — SQuAD-style reference-based
+  Exact Match and F1, no LLM judge needed)
+- Metric computation functions (precision, recall, faithfulness, EM, F1, etc. — see `metrics.py`)
 - Evaluator-specific configuration classes
 - Ground truth comparison logic
 - Evaluator registry and factory functions
@@ -115,7 +129,9 @@ rag-vector-db-benchmark/
 **Responsibility**: Define dataset loaders and data structures for queries, documents, and ground truth.
 
 **What belongs here**:
-- Dataset loader implementations
+- Dataset loader implementations, e.g. `squad_loader.py` (`SQuADLoader`), which implements
+  `load()`, `load_documents()`, and `load_gold_answers()` — the last returns the gold answer
+  strings per query, used by `AnswerQualityEvaluator` to compute EM/F1
 - Dataset-specific data structures
 - Dataset registry and factory functions
 - Data validation and schema checking
@@ -177,7 +193,11 @@ rag-vector-db-benchmark/
 **Responsibility**: Store experiment configuration files that define component choices, datasets, and evaluation criteria.
 
 **What belongs here**:
-- Experiment configuration files (YAML, JSON, or TOML)
+- Experiment configuration files (YAML). Current set in `experiments/configs/`:
+  `baseline_chroma.yaml`, `baseline_qdrant.yaml`, `baseline_faiss.yaml`, `baseline_milvus.yaml`,
+  `baseline_elasticsearch.yaml`, `baseline_weaviate.yaml` (one per retriever, retrieval-only,
+  `top_k=10`), `baseline_ollama.yaml` / `baseline_ollama_separate_judge.yaml` (end-to-end),
+  `benchmark_all_dbs.yaml` (runs all 6 retrievers), `docker_rag_api.yaml`
 - Configuration templates
 - Configuration validation schemas
 - Experiment metadata files
@@ -196,7 +216,12 @@ rag-vector-db-benchmark/
 **Responsibility**: Store immutable experiment results, metrics, and artifacts.
 
 **What belongs here**:
-- Experiment result files (metrics, logs, outputs)
+- Experiment result files (metrics, logs, outputs), organized as:
+  - `official_*.json` at the top level — the official results referenced in the thesis/README.
+    Two naming conventions in use: `official_baseline_<db>_100q_topk10_<timestamp>.json`
+    (single-DB baseline) and `official_scale_<N>docs_..._<timestamp>.json` (scale series)
+  - `archive/` — superseded or historical runs kept for reference
+  - `debug/` — throwaway runs from development, not citable results
 - Result metadata and provenance information
 - Comparison reports
 - Visualization data

@@ -721,7 +721,7 @@ def _print_table(report: dict[str, Any]) -> None:
         f"Daha hızlı retrieval: {report['winner_faster_retrieval']}  |  "
         f"Daha yüksek {ck}: {report['winner_higher_recall']}"
     )
-    print("=" * 126 + "\n")
+    print("=" * 165 + "\n")
 
 
 def main() -> None:

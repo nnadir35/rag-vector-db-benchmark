@@ -10,20 +10,50 @@
 
 This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipelines: how accurately an AI system retrieves relevant documents and generates correct answers from a company's internal knowledge base.
 
-## Real Benchmark Results (SQuAD v2 · 100 queries)
+## Real Benchmark Results (SQuAD v2 · 100 queries, top_k=10, real Docker services)
 
-| Metric      | Score     | What it means                                       |
-| ----------- | --------- | --------------------------------------------------- |
-| MRR         | **0.707** | On average, the correct answer is ranked 1st or 2nd |
-| Precision@1 | **0.610** | 61% of top results are directly relevant            |
-| Recall@3    | **0.820** | 82% of relevant documents found in top 3 results    |
+Retrieval quality (MRR / nDCG / Recall) is **identical across all 6 databases** at
+this scale — with ~100 documents every DB does an effectively-exact nearest-neighbor
+search, so quality differences don't show up yet (they emerge at larger scale once
+approximate indexing kicks in, see below). What differs is speed:
 
-*Not: Tablodaki sonuçlar `experiments/results/20260307_051139_baseline_ollama_squad.json` test çalışmasından alınmıştır.*
+| DB | MRR | nDCG@10 | Recall@10 | Retrieval latency |
+| --- | --- | --- | --- | --- |
+| FAISS | 0.7335 | 0.7827 | 0.93 | **18 ms** |
+| ElasticSearch | 0.7335 | 0.7827 | 0.93 | 25 ms |
+| Milvus | 0.7335 | 0.7827 | 0.93 | 30 ms |
+| ChromaDB | 0.7335 | 0.7827 | 0.93 | 32 ms |
+| Qdrant | 0.7335 | 0.7827 | 0.93 | 32 ms |
+| Weaviate | 0.7335 | 0.7827 | 0.93 | 54 ms |
+
+*Quality metrics (MRR/nDCG/Recall) from `experiments/results/official_baseline_<db>_100q_topk10_*.json`
+(100 queries against the SQuAD v2 validation split). Latency figures from the ~100-document
+scale run `experiments/results/official_scale_100docs_6db_GPU_realserver_20260716_150826.json`
+— a separate run at comparable scale, since the baseline files don't record per-query timing.*
+
+### At 1000 documents
+
+| DB | Retrieval latency | Recall@10 |
+| --- | --- | --- |
+| Weaviate | 17 ms | 0.83 |
+| FAISS | 17 ms | 0.83 |
+| Milvus | 18 ms | 0.83 |
+| ElasticSearch | 23 ms | 0.83 |
+| ChromaDB | 28 ms | 0.83 |
+| Qdrant | 32 ms | 0.83 |
+
+*Source: `experiments/results/official_scale_1000docs_6db_GPU_realserver_20260716_151645.json`.
+Milvus here is the real Docker server, not Milvus Lite — its earlier ~340 ms-class numbers
+in older runs came from `in_memory: true` (embedded Milvus Lite), not the production engine;
+see [`in_memory` semantics](#retrieverin_memory--read-this-before-comparing-dbs) below.*
 
 ## What This Enables
 
 - **Drop in any LLM**: Ollama (local/private), OpenAI, Anthropic — swap with one config change
-- **Drop in any vector DB**: Implemented: ChromaDB, Qdrant, FAISS, Milvus, ElasticSearch, Weaviate. Pinecone adapter exists but is not part of the systematic benchmark.
+- **6 vector DBs benchmarked**: ChromaDB, Qdrant, FAISS, Milvus, ElasticSearch, Weaviate. A
+  Pinecone adapter also exists (`src/retrievers/pinecone_retriever.py`) but is **not** part of
+  the systematic benchmark — it's managed-only SaaS and can't be run against local Docker like
+  the others.
 - **Measure before you ship**: Know your retrieval quality with real numbers before going to production
 - **Full privacy option**: Runs entirely locally with Ollama — no data leaves your servers
 
@@ -45,13 +75,85 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Run benchmarks and tests from the same directory (scripts add the project root to `sys.path`):
+`requirements.txt` covers ChromaDB, Qdrant, Milvus, and FAISS. ElasticSearch and Weaviate
+clients aren't pinned there yet — install them separately if you're running against the real
+servers (`in_memory: false`):
 
 ```bash
-python scripts/run_experiment.py --config experiments/configs/baseline_ollama.yaml
+pip install elasticsearch "weaviate-client>=4.0.0"
+```
+
+To benchmark against the real Docker-backed services instead of the in-process mocks/Lite
+modes, start them first:
+
+```bash
+docker-compose up -d
+```
+
+Run benchmarks and tests from the same directory (scripts add the project root to `sys.path`).
+Setting `HF_HUB_OFFLINE=1` is recommended once the embedding model has been downloaded once —
+it stops `sentence-transformers` from making a Hub network call on every run:
+
+```bash
+HF_HUB_OFFLINE=1 python scripts/run_experiment.py --config experiments/configs/baseline_ollama.yaml
 python -m pytest tests/ -q
 python api.py   # FastAPI on http://0.0.0.0:8000  (requires Ollama if using default generator)
 ```
+
+## Configuration
+
+Baseline experiment configs live in `experiments/configs/`, one per retriever plus a
+combined run:
+
+| Config | Purpose |
+| --- | --- |
+| `baseline_chroma.yaml` | ChromaDB retriever |
+| `baseline_qdrant.yaml` | Qdrant retriever |
+| `baseline_faiss.yaml` | FAISS retriever |
+| `baseline_milvus.yaml` | Milvus retriever |
+| `baseline_elasticsearch.yaml` | ElasticSearch retriever |
+| `baseline_weaviate.yaml` | Weaviate retriever |
+| `baseline_ollama.yaml` | End-to-end run with the Ollama generator |
+| `baseline_ollama_separate_judge.yaml` | Same, with a separate LLM used as judge |
+| `benchmark_all_dbs.yaml` | Runs all 6 retrievers back-to-back for comparison |
+| `docker_rag_api.yaml` | Config used by the Dockerized `api.py` service |
+
+### `retriever.in_memory` — read this before comparing DBs
+
+Every retriever config accepts an `in_memory` flag, but **it means something different
+for each database** — it is not a uniform "no Docker" switch:
+
+| DB | `in_memory: true` | `in_memory: false` |
+| --- | --- | --- |
+| ChromaDB | *(no such option — always a real client)* | always a real client |
+| FAISS | *(no such option — always in-process)* | always in-process |
+| Qdrant | Full Qdrant engine, RAM-only, nothing written to disk | Connects to the Dockerized Qdrant service |
+| Milvus | **Milvus Lite** — an embedded, single-process build; ~10x slower than the real server and not representative of production Milvus | Connects to the real Milvus server (Docker) |
+| ElasticSearch | **Mock**: a plain dict + NumPy cosine similarity — none of the real Elasticsearch client/index code runs | Connects to the real ES server (Docker, port 9200) |
+| Weaviate | **Mock**: same dict + NumPy cosine similarity mock as ES — none of the real Weaviate client code runs | Connects to the real Weaviate server (Docker, port 8080) |
+
+This matters for benchmarking: a Milvus/ElasticSearch/Weaviate run with `in_memory: true`
+is **not** measuring the real database — it's measuring an embedded or mocked stand-in. All
+`official_*` results above were produced with the real services (`in_memory: false`, or
+Qdrant's genuine RAM-only engine, which is a real implementation rather than a mock).
+
+Test suites intentionally use `in_memory: true` everywhere (fast, no Docker dependency) —
+see `tests/conftest.py`.
+
+### Embedding device
+
+`embedder.device` accepts `"cpu"`, `"cuda"` (NVIDIA GPU), or `"mps"` (Apple Silicon GPU).
+The bundled baseline configs default to `"mps"`; switch to `"cpu"` on machines without a
+compatible GPU, or `"cuda"` on NVIDIA hardware.
+
+### Scope note
+
+This framework is used in the author's thesis with a **retrieval-focused** lens: the DB
+comparisons above rank databases on retrieval metrics only. The framework also implements
+LLM-judge generation evaluation (Faithfulness, Relevance — see `src/evaluators/generation_evaluator.py`)
+for full end-to-end runs, but that's orthogonal to vector-DB choice — generation quality is
+driven by the LLM and prompt, not the retriever — so it's left out of the DB comparison
+tables.
 
 ## Problem Definition
 
@@ -111,13 +213,13 @@ flowchart LR
 
 **1. The Librarian (Retriever)**
 - **What it does:** Takes your question and searches the database for relevant text chunks.
-- **What it contains:** The Vector Database (like Chroma or Pinecone) and the Embedding Model.
+- **What it contains:** The Vector Database (ChromaDB, Qdrant, FAISS, Milvus, ElasticSearch, or Weaviate) and the Embedding Model.
 - **How it's graded:** Did it find the right documents? (Metrics: MRR, Precision, Recall)
 
 **2. The Writer (Generator)**
 - **What it does:** Reads the documents found by the Librarian and writes a coherent answer to your question.
 - **What it contains:** The LLM (like GPT-4 or Llama 3) and the Prompt Template.
-- **How it's graded:** Is the answer based *only* on the documents? Is it helpful? (Metrics: Faithfulness, Relevance)
+- **How it's graded:** Is the answer based *only* on the documents? Is it helpful? (LLM-judge metrics: Faithfulness, Relevance) — plus reference-based **Exact Match (EM)** and **F1** against the SQuAD gold answers (`AnswerQualityEvaluator`), which don't require an LLM judge at all.
 
 **3. The Judge (Evaluator)**
 - **What it does:** Gives a score to the Librarian and the Writer separately.
@@ -158,7 +260,7 @@ All experiments must be reproducible. This means:
 
 ### Metrics Hierarchy
 
-1. **Primary metrics**: Core quality measures (accuracy, relevance, faithfulness)
+1. **Primary metrics**: Core quality measures (Exact Match, F1, relevance, faithfulness)
 2. **Performance metrics**: Latency and throughput
 3. **Cost metrics**: Per-query and per-experiment costs
 4. **Failure analysis**: Error rates, timeout frequencies, edge case handling
