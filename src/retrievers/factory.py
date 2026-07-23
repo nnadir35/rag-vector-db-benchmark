@@ -52,7 +52,13 @@ def build_retriever_from_yaml(raw_config: dict[str, Any], embedder: Embedder) ->
         from .weaviate_retriever import WeaviateRetriever
 
         return WeaviateRetriever(WeaviateRetrieverConfig(**kwargs), embedder)
+    if rtype == "elasticsearch":
+        from .config import ElasticSearchRetrieverConfig
+        from .elasticsearch_retriever import ElasticSearchRetriever
+
+        return ElasticSearchRetriever(ElasticSearchRetrieverConfig(**kwargs), embedder)
     raise ValueError(
-        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss, milvus, weaviate."
+        f"Unknown retriever type '{rtype}'. Expected one of: pinecone, chroma, qdrant, faiss, milvus, weaviate, "
+        "elasticsearch."
     )
 
