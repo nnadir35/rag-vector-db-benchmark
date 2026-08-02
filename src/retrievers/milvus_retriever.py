@@ -374,19 +374,22 @@ class MilvusRetriever(Retriever):
             "collection_name": self._config.collection_name,
             "distance_metric": self._config.distance_metric,
         }
+        info["hnsw_ef_search"] = self._config.hnsw_ef_search
         if self._client is not None and self._collection_ready:
             try:
                 client = self._get_client()
-                index_details = client.describe_index(collection_name=self._config.collection_name, index_name="vector_index")
+                index_details = client.describe_index(collection_name=self._config.collection_name, index_name="vector")
                 info["index_details"] = index_details
                 info["index_type"] = index_details.get("index_type")
-                params = index_details.get("params", {})
+                # pymilvus returns HNSW params ("M", "efConstruction") as top-level keys
+                # in index_details, not nested under a "params" key.
+                params = index_details.get("params", index_details)
                 info["params"] = params
                 if "M" in params:
                     info["hnsw_m"] = int(params["M"])
                 if "efConstruction" in params:
                     info["hnsw_ef_construction"] = int(params["efConstruction"])
-            except Exception:
-                pass
+            except Exception as e:
+                info["describe_error"] = str(e)
         return info
 

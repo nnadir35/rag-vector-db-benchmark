@@ -361,6 +361,7 @@ class QdrantRetriever(Retriever):
             "in_memory": in_memory,
             "collection_name": self._config.collection_name,
             "distance_metric": self._config.distance_metric,
+            "hnsw_ef_search": self._config.hnsw_ef_search,
         }
         if self._client is not None and self._collection_ready:
             try:

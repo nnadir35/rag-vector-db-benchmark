@@ -13,6 +13,8 @@ import argparse
 import json
 import logging
 import os
+import re
+import subprocess
 import sys
 import threading
 import time
@@ -355,6 +357,154 @@ def _winner_recall_multi(db_recall: dict[str, float]) -> str:
     return winners[0]
 
 
+# Docker-based DB'ler için: (container adı adayları, konteyner içindeki veri yolu).
+# Weaviate docker-compose.yml'de container_name/volume tanımlamıyor; adı proje
+# önekiyle otomatik üretiliyor ve verisi container'ın yazılabilir katmanında
+# tutuluyor, bu yüzden isim "weaviate" içeren çalışan konteyner otomatik bulunur.
+_DOCKER_DB_PATHS: dict[str, tuple[list[str], str]] = {
+    "qdrant": (["qdrant_db"], "/qdrant/storage"),
+    "milvus": (["milvus_db"], "/var/lib/milvus"),
+    "elasticsearch": (["elasticsearch_db"], "/usr/share/elasticsearch/data"),
+    "weaviate": (["weaviate"], "/var/lib/weaviate"),
+}
+
+
+def _find_container_name(candidates: list[str]) -> str | None:
+    """Find a running container whose name matches or contains one of the candidates."""
+    try:
+        proc = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    names = proc.stdout.strip().splitlines()
+    for cand in candidates:
+        for n in names:
+            if cand == n or cand in n:
+                return n
+    return None
+
+
+def _parse_size_token(token: str) -> float | None:
+    """Parse a docker-formatted size token (e.g. '12.3MB', '1.2GB') into megabytes."""
+    m = re.match(r"^([\d.]+)\s*(GB|MB|kB|B)$", token.strip())
+    if not m:
+        return None
+    value, unit = float(m.group(1)), m.group(2)
+    multiplier = {"B": 1e-6, "kB": 1e-3, "MB": 1.0, "GB": 1000.0}[unit]
+    return value * multiplier
+
+
+def _docker_exec_du_mb(container: str, path: str) -> float | None:
+    """Primary strategy: du -sm run inside the container (avoids host/VM volume path issues)."""
+    try:
+        result = subprocess.run(
+            ["docker", "exec", container, "du", "-sm", path],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        return float(result.stdout.split()[0])
+    except (ValueError, IndexError):
+        return None
+
+
+def _docker_system_df_mb(container: str) -> float | None:
+    """Fallback strategy: parse `docker system df -v` for the container's size."""
+    try:
+        result = subprocess.run(
+            ["docker", "system", "df", "-v"],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.splitlines():
+        if container not in line:
+            continue
+        for token in line.split():
+            size = _parse_size_token(token)
+            if size is not None:
+                return size
+    return None
+
+
+def _docker_stats_blkio_write_mb(container: str) -> float | None:
+    """Last-resort fallback: cumulative block I/O write reported by `docker stats`.
+
+    Not a true before/after delta (container may have pre-existing I/O), but the
+    best signal available without instrumenting indexing calls per DB.
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "stats", "--no-stream", "--format", "{{.BlockIO}}", container],
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    parts = result.stdout.strip().split("/")
+    if len(parts) != 2:
+        return None
+    return _parse_size_token(parts[1].strip())
+
+
+def measure_disk_size_mb(db_name: str, persist_path: str | None) -> dict[str, Any]:
+    """Measure on-disk index size for a retriever.
+
+    For in-process DBs (chroma, faiss) without a persist path, there is genuinely
+    no disk footprint to measure (RAM-only) — this is reported as 0.0 with a flag,
+    not an error. For Docker-backed DBs, tries docker exec + du, then
+    `docker system df -v`, then a docker stats block-I/O fallback.
+    """
+    if db_name in ("chroma", "faiss"):
+        if not persist_path or not os.path.exists(persist_path):
+            return {"disk_size_mb": 0.0, "disk_size_flag": "in_memory_no_disk"}
+        try:
+            result = subprocess.run(
+                ["du", "-sm", persist_path], capture_output=True, text=True, timeout=30, check=False,
+            )
+            if result.returncode == 0:
+                return {"disk_size_mb": float(result.stdout.split()[0])}
+        except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+            pass
+        return {"disk_size_mb": None, "disk_size_error": "du_failed_on_persist_path"}
+
+    candidates, container_path = _DOCKER_DB_PATHS[db_name]
+    container = _find_container_name(candidates)
+    if container is None:
+        return {
+            "disk_size_mb": None,
+            "disk_size_error": f"container_not_found (tried {candidates})",
+        }
+
+    size = _docker_exec_du_mb(container, container_path)
+    if size is not None:
+        return {"disk_size_mb": size}
+
+    size = _docker_system_df_mb(container)
+    if size is not None:
+        return {"disk_size_mb": size, "disk_size_flag": "measured_via_docker_system_df_fallback"}
+
+    blkio = _docker_stats_blkio_write_mb(container)
+    if blkio is not None:
+        return {
+            "disk_size_mb": None,
+            "disk_size_error": "docker_exec_du_and_system_df_failed",
+            "disk_io_write_mb": blkio,
+        }
+
+    return {"disk_size_mb": None, "disk_size_error": "all_measurement_strategies_failed"}
+
+
 def validate_effective_config(effective_cfg: dict[str, dict[str, Any]]) -> None:
     """Check effective DB configurations and output warnings to stderr if unexpected modes are used."""
     expected_defaults = {
@@ -362,9 +512,12 @@ def validate_effective_config(effective_cfg: dict[str, dict[str, Any]]) -> None:
         "hnsw_ef_construction": 200,
         "hnsw_ef_search": 64,
     }
+    # ChromaDB ve FAISS'in in_memory kavramı yok; her zaman in-process çalışırlar.
+    # in_memory=True bu iki DB için beklenen durumdur, mock anlamına gelmez.
+    inherently_in_process = {"chroma", "faiss"}
     warnings: list[str] = []
     for db_name, cfg in effective_cfg.items():
-        if cfg.get("in_memory") is True:
+        if cfg.get("in_memory") is True and db_name not in inherently_in_process:
             warnings.append(f"[{db_name.upper()}] in_memory=True (MOCK / embedded in-process mode running!)")
         if db_name == "faiss" and cfg.get("index_type") != "hnsw":
             warnings.append(f"[FAISS] index_type='{cfg.get('index_type')}' (expected 'hnsw')")
@@ -372,7 +525,12 @@ def validate_effective_config(effective_cfg: dict[str, dict[str, Any]]) -> None:
             if key in expected_defaults:
                 actual = cfg.get(key)
                 exp_val = expected_defaults[key]
-                if actual is not None and actual != exp_val:
+                if actual is None:
+                    warnings.append(
+                        f"[{db_name.upper()}] {key} doğrulanamadı "
+                        "(describe_index başarısız veya alan eksik)"
+                    )
+                elif actual != exp_val:
                     warnings.append(f"[{db_name.upper()}] {key}={actual} (expected {exp_val})")
 
     if warnings:
@@ -490,6 +648,7 @@ def run_benchmark(
         evaluator=evaluator,
         num_repeats=num_repeats,
         show_progress=show_progress,
+        dump_per_query=dump_per_query,
     )
     chroma_retrieval_stats = chroma_eval["resource_stats"]
     chroma_mean = chroma_eval["metrics_mean"]
@@ -516,6 +675,7 @@ def run_benchmark(
         evaluator=evaluator,
         num_repeats=num_repeats,
         show_progress=show_progress,
+        dump_per_query=dump_per_query,
     )
     qdrant_retrieval_stats = qdrant_eval["resource_stats"]
     qdrant_mean = qdrant_eval["metrics_mean"]
@@ -543,6 +703,7 @@ def run_benchmark(
         evaluator=evaluator,
         num_repeats=num_repeats,
         show_progress=show_progress,
+        dump_per_query=dump_per_query,
     )
     faiss_retrieval_stats = faiss_eval["resource_stats"]
     faiss_mean = faiss_eval["metrics_mean"]
@@ -570,6 +731,7 @@ def run_benchmark(
         evaluator=evaluator,
         num_repeats=num_repeats,
         show_progress=show_progress,
+        dump_per_query=dump_per_query,
     )
     milvus_retrieval_stats = milvus_eval["resource_stats"]
     milvus_mean = milvus_eval["metrics_mean"]
@@ -597,6 +759,7 @@ def run_benchmark(
         evaluator=evaluator,
         num_repeats=num_repeats,
         show_progress=show_progress,
+        dump_per_query=dump_per_query,
     )
     elasticsearch_retrieval_stats = elasticsearch_eval["resource_stats"]
     elasticsearch_mean = elasticsearch_eval["metrics_mean"]
@@ -624,6 +787,7 @@ def run_benchmark(
         evaluator=evaluator,
         num_repeats=num_repeats,
         show_progress=show_progress,
+        dump_per_query=dump_per_query,
     )
     weaviate_retrieval_stats = weaviate_eval["resource_stats"]
     weaviate_mean = weaviate_eval["metrics_mean"]
@@ -744,6 +908,15 @@ def run_benchmark(
     }
     validate_effective_config(effective_config)
 
+    disk_size_info = {
+        "chroma": measure_disk_size_mb("chroma", chroma_cfg.persist_directory),
+        "qdrant": measure_disk_size_mb("qdrant", None),
+        "faiss": measure_disk_size_mb("faiss", faiss_cfg.persist_path),
+        "milvus": measure_disk_size_mb("milvus", None),
+        "elasticsearch": measure_disk_size_mb("elasticsearch", None),
+        "weaviate": measure_disk_size_mb("weaviate", None),
+    }
+
     ret_dict = {
         "squad_version": squad_version,
         "splits_used": splits_used,
@@ -849,6 +1022,23 @@ def run_benchmark(
             "Weaviate": weaviate_recall,
         }),
     }
+
+    for db_name, info in disk_size_info.items():
+        ret_dict[f"disk_size_mb_{db_name}"] = info.get("disk_size_mb")
+        if "disk_size_error" in info:
+            ret_dict[f"disk_size_error_{db_name}"] = info["disk_size_error"]
+        if "disk_size_flag" in info:
+            ret_dict[f"disk_size_flag_{db_name}"] = info["disk_size_flag"]
+        if "disk_io_write_mb" in info:
+            ret_dict[f"disk_io_write_mb_{db_name}"] = info["disk_io_write_mb"]
+
+    if dump_per_query:
+        ret_dict["per_query_details_chroma"] = chroma_eval["per_query_details"]
+        ret_dict["per_query_details_qdrant"] = qdrant_eval["per_query_details"]
+        ret_dict["per_query_details_faiss"] = faiss_eval["per_query_details"]
+        ret_dict["per_query_details_milvus"] = milvus_eval["per_query_details"]
+        ret_dict["per_query_details_elasticsearch"] = elasticsearch_eval["per_query_details"]
+        ret_dict["per_query_details_weaviate"] = weaviate_eval["per_query_details"]
     return ret_dict
 
 

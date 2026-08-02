@@ -57,6 +57,8 @@ elasticsearch_retriever:
   in_memory: false
   host: "http://localhost:9200"
   num_candidates: 64
+  hnsw_m: 16
+  hnsw_ef_construction: 200
 
 weaviate_retriever:
   collection_name: "bench_weaviate_squad"

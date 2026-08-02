@@ -28,34 +28,43 @@ def compare_results(file1_path: str, file2_path: str) -> None:
     if len(qids1) >= 20 and len(qids2) >= 20:
         first_20_match = qids1[:20] == qids2[:20]
         print(f"First 20 query IDs identical: {'YES' if first_20_match else 'NO'}")
-    
-    details1 = data1.get("per_query_details")
-    details2 = data2.get("per_query_details")
 
-    if not details1 or not details2:
+    db_names = ["chroma", "qdrant", "faiss", "milvus", "elasticsearch", "weaviate"]
+    found_any = False
+    for db_name in db_names:
+        key = f"per_query_details_{db_name}"
+        details1 = data1.get(key)
+        details2 = data2.get(key)
+        if not details1 or not details2:
+            continue
+        found_any = True
+
+        print("\n" + "-" * 80)
+        print(f"DB: {db_name}")
+        print("-" * 80)
+
+        # Map query_id -> retrieved info
+        map1 = {item["query_id"]: item.get("retrieved", []) for item in details1}
+        map2 = {item["query_id"]: item.get("retrieved", []) for item in details2}
+
+        mismatches = 0
+        for qid in common_qids:
+            r1 = [chunk["chunk_id"] for chunk in map1.get(qid, [])]
+            r2 = [chunk["chunk_id"] for chunk in map2.get(qid, [])]
+            if r1 != r2:
+                mismatches += 1
+                print(f"\n[Mismatch] Query ID: {qid}")
+                print(f"  File 1 retrieved: {r1}")
+                print(f"  File 2 retrieved: {r2}")
+
+        if mismatches == 0:
+            print(f"✅ All {len(common_qids)} common queries produced EXACT SAME retrieved chunk sequence!")
+        else:
+            print(f"❌ Mismatches found in {mismatches}/{len(common_qids)} common queries.")
+
+    if not found_any:
         print("\nNote: Detailed per-query retrieved chunks not stored in both JSON files.")
         print("To enable full per-query document diffing, run benchmark_db.py with --dump-per-query.")
-        print("=" * 80)
-        return
-
-    # Map query_id -> retrieved info
-    map1 = {item["query_id"]: item.get("retrieved", []) for item in details1}
-    map2 = {item["query_id"]: item.get("retrieved", []) for item in details2}
-
-    mismatches = 0
-    for qid in common_qids:
-        r1 = [chunk["chunk_id"] for chunk in map1.get(qid, [])]
-        r2 = [chunk["chunk_id"] for chunk in map2.get(qid, [])]
-        if r1 != r2:
-            mismatches += 1
-            print(f"\n[Mismatch] Query ID: {qid}")
-            print(f"  File 1 retrieved: {r1}")
-            print(f"  File 2 retrieved: {r2}")
-
-    if mismatches == 0:
-        print(f"\n✅ All {len(common_qids)} common queries produced EXACT SAME retrieved chunk sequence!")
-    else:
-        print(f"\n❌ Mismatches found in {mismatches}/{len(common_qids)} common queries.")
 
     print("=" * 80)
 

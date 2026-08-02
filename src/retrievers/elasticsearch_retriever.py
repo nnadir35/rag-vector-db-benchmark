@@ -308,6 +308,7 @@ class ElasticSearchRetriever(Retriever):
             "in_memory": self._config.in_memory,
             "index_name": self._config.index_name,
             "distance_metric": self._config.distance_metric,
+            "num_candidates": self._config.num_candidates,
         }
         if not self._config.in_memory:
             try:
@@ -315,7 +316,7 @@ class ElasticSearchRetriever(Retriever):
                 if client.indices.exists(index=self._config.index_name):
                     mapping = client.indices.get_mapping(index=self._config.index_name)
                     info["mapping"] = mapping.body if hasattr(mapping, "body") else dict(mapping)
-                    props = info["mapping"].get(self._config.index_name, {}).get("mappings", {}).get("properties", {}).get("vector", {})
+                    props = info["mapping"].get(self._config.index_name, {}).get("mappings", {}).get("properties", {}).get("embedding", {})
                     idx_opts = props.get("index_options", {})
                     info["index_options"] = idx_opts
                     if "m" in idx_opts:
