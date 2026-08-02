@@ -134,12 +134,10 @@ class QdrantRetrieverConfig:
 
         if not self.in_memory and self.persist_path is None:
             # Remote Qdrant (Docker / k8s) uses QDRANT_URL or QDRANT_HOST from the environment
-            # instead of a local persist_path.
+            # default to host localhost if neither is provided.
             if not (os.getenv("QDRANT_URL") or os.getenv("QDRANT_HOST")):
-                raise ValueError(
-                    "persist_path must be provided when in_memory is False "
-                    "unless QDRANT_URL or QDRANT_HOST is set for remote mode"
-                )
+                object.__setattr__(self, "persist_path", None)
+                os.environ["QDRANT_HOST"] = "localhost"
 
 
 @dataclass(frozen=True)
