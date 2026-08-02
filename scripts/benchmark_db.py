@@ -207,8 +207,9 @@ WARMUP_COUNT = 10
 def _evaluate_with_repeats(
     *,
     name: str,
-    retrieve_fn: Callable[[Query, int], Any],
+    retrieve_fn: Callable[[Embedding, int, str], Any],
     bench_queries: list[Query],
+    query_embeddings: dict[str, Embedding],
     top_k: int,
     ground_truth: dict[str, set[str]],
     evaluator: RetrievalEvaluator,
@@ -216,7 +217,12 @@ def _evaluate_with_repeats(
     show_progress: bool,
     dump_per_query: bool = False,
 ) -> dict[str, Any]:
-    """Run the retrieval pass for one DB ``num_repeats`` times."""
+    """Run the retrieval pass for one DB ``num_repeats`` times.
+
+    ``retrieve_fn`` takes a pre-computed query embedding (``retrieve_with_embedding``
+    underneath) so the measured latency here is search-only — query embedding cost
+    (constant, DB-independent) is measured once by the caller and reported separately.
+    """
     per_repeat_avg_ms: list[float] = []
     per_repeat_p50_ms: list[float] = []
     per_repeat_p95_ms: list[float] = []
@@ -227,7 +233,7 @@ def _evaluate_with_repeats(
         warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
         for repeat_idx in range(num_repeats):
             for q in warmup_queries:
-                retrieve_fn(q, top_k)
+                retrieve_fn(query_embeddings[q.id], top_k, q.id)
 
             latencies_ms: list[float] = []
             rows: list[dict[str, float]] = []
@@ -239,7 +245,7 @@ def _evaluate_with_repeats(
                 disable=not show_progress,
             ):
                 t_r0 = time.perf_counter()
-                result = retrieve_fn(q, top_k)
+                result = retrieve_fn(query_embeddings[q.id], top_k, q.id)
                 lat_ms = (time.perf_counter() - t_r0) * 1000.0
                 latencies_ms.append(lat_ms)
                 gt = set(ground_truth.get(q.id, set()))
@@ -366,6 +372,7 @@ _DOCKER_DB_PATHS: dict[str, tuple[list[str], str]] = {
     "milvus": (["milvus_db"], "/var/lib/milvus"),
     "elasticsearch": (["elasticsearch_db"], "/usr/share/elasticsearch/data"),
     "weaviate": (["weaviate"], "/var/lib/weaviate"),
+    "chroma": (["chroma_db"], "/chroma/chroma"),
 }
 
 
@@ -465,7 +472,8 @@ def measure_disk_size_mb(db_name: str, persist_path: str | None) -> dict[str, An
     not an error. For Docker-backed DBs, tries docker exec + du, then
     `docker system df -v`, then a docker stats block-I/O fallback.
     """
-    if db_name in ("chroma", "faiss"):
+    chroma_in_docker = db_name == "chroma" and bool(os.getenv("CHROMA_HOST", "").strip())
+    if db_name in ("chroma", "faiss") and not chroma_in_docker:
         if not persist_path or not os.path.exists(persist_path):
             return {"disk_size_mb": 0.0, "disk_size_flag": "in_memory_no_disk"}
         try:
@@ -561,6 +569,7 @@ def run_benchmark(
     num_repeats: int = 3,
     query_seed: int = 42,
     dump_per_query: bool = False,
+    include_faiss: bool = False,
 ) -> dict[str, Any]:
     """Execute indexing and retrieval benchmarks; return a JSON-serializable report."""
 
@@ -627,6 +636,20 @@ def run_benchmark(
     embeddings: list[Embedding] = embedder.embed_chunks(chunks)
     embedding_seconds = time.perf_counter() - t0
 
+    # --- Query embeddings: computed once, shared by every DB's retrieve_with_embedding
+    # call, so per-DB retrieval latency below is search-only (index size dependent),
+    # not inflated by the ~constant embed_query() cost. ---
+    logging.info("Embedding %s queries (single pass, shared by every DB)...", len(bench_queries))
+    t_qe0 = time.perf_counter()
+    query_embeddings: dict[str, Embedding] = {
+        q.id: embedder.embed_query(q)
+        for q in tqdm(bench_queries, desc="Embedding queries", unit="q", disable=not show_progress)
+    }
+    query_embedding_total_ms = (time.perf_counter() - t_qe0) * 1000.0
+    query_embedding_avg_ms = (
+        query_embedding_total_ms / len(bench_queries) if bench_queries else float("nan")
+    )
+
     # --- Chroma: persist + resource stats ---
     chroma = ChromaRetriever(config=chroma_cfg, embedder=embedder)
     chroma.clear()
@@ -641,8 +664,9 @@ def run_benchmark(
     # --- Retrieval + accuracy (Chroma) ---
     chroma_eval = _evaluate_with_repeats(
         name="Chroma",
-        retrieve_fn=lambda q, k: chroma.retrieve(q, top_k=k),
+        retrieve_fn=lambda emb, k, qid: chroma.retrieve_with_embedding(emb, top_k=k, query_id=qid),
         bench_queries=bench_queries,
+        query_embeddings=query_embeddings,
         top_k=top_k,
         ground_truth=ground_truth,
         evaluator=evaluator,
@@ -668,8 +692,9 @@ def run_benchmark(
 
     qdrant_eval = _evaluate_with_repeats(
         name="Qdrant",
-        retrieve_fn=lambda q, k: qdrant.retrieve(q, top_k=k),
+        retrieve_fn=lambda emb, k, qid: qdrant.retrieve_with_embedding(emb, top_k=k, query_id=qid),
         bench_queries=bench_queries,
+        query_embeddings=query_embeddings,
         top_k=top_k,
         ground_truth=ground_truth,
         evaluator=evaluator,
@@ -682,33 +707,45 @@ def run_benchmark(
     qdrant_std = qdrant_eval["metrics_std"]
     qdrant_recall = qdrant_mean.get(recall_key, float("nan"))
 
-    # --- FAISS: persist + resource stats ---
-    faiss = FAISSRetriever(config=faiss_cfg, embedder=embedder)
-    faiss.clear()
-    t_fidx0 = time.perf_counter()
+    # --- FAISS: persist + resource stats (opt-in; excluded from the systematic
+    # benchmark by default — in-process library, no network layer, not comparable
+    # to the Docker-backed DBs. See CLAUDE.md Pinecone precedent.) ---
+    faiss: FAISSRetriever | None = None
+    faiss_eval: dict[str, Any] | None = None
+    faiss_index_stats: ResourceStats | None = None
+    faiss_add_seconds = 0.0
+    faiss_mean: dict[str, float] = {}
+    faiss_std: dict[str, float] = {}
+    faiss_recall = float("nan")
 
-    def _faiss_index() -> None:
-        faiss.add_chunks(chunks, embeddings)
+    if include_faiss:
+        faiss = FAISSRetriever(config=faiss_cfg, embedder=embedder)
+        faiss.clear()
+        t_fidx0 = time.perf_counter()
 
-    _, faiss_index_stats = run_with_resource_stats(_faiss_index)
-    faiss_add_seconds = time.perf_counter() - t_fidx0
+        def _faiss_index() -> None:
+            faiss.add_chunks(chunks, embeddings)
 
-    # --- Retrieval + accuracy (FAISS) ---
-    faiss_eval = _evaluate_with_repeats(
-        name="FAISS",
-        retrieve_fn=lambda q, k: faiss.retrieve(q, top_k=k),
-        bench_queries=bench_queries,
-        top_k=top_k,
-        ground_truth=ground_truth,
-        evaluator=evaluator,
-        num_repeats=num_repeats,
-        show_progress=show_progress,
-        dump_per_query=dump_per_query,
-    )
-    faiss_retrieval_stats = faiss_eval["resource_stats"]
-    faiss_mean = faiss_eval["metrics_mean"]
-    faiss_std = faiss_eval["metrics_std"]
-    faiss_recall = faiss_mean.get(recall_key, float("nan"))
+        _, faiss_index_stats = run_with_resource_stats(_faiss_index)
+        faiss_add_seconds = time.perf_counter() - t_fidx0
+
+        # --- Retrieval + accuracy (FAISS) ---
+        faiss_eval = _evaluate_with_repeats(
+            name="FAISS",
+            retrieve_fn=lambda emb, k, qid: faiss.retrieve_with_embedding(emb, top_k=k, query_id=qid),
+            bench_queries=bench_queries,
+            query_embeddings=query_embeddings,
+            top_k=top_k,
+            ground_truth=ground_truth,
+            evaluator=evaluator,
+            num_repeats=num_repeats,
+            show_progress=show_progress,
+            dump_per_query=dump_per_query,
+        )
+        faiss_retrieval_stats = faiss_eval["resource_stats"]
+        faiss_mean = faiss_eval["metrics_mean"]
+        faiss_std = faiss_eval["metrics_std"]
+        faiss_recall = faiss_mean.get(recall_key, float("nan"))
 
     # --- Milvus: persist + resource stats ---
     milvus = MilvusRetriever(config=milvus_cfg, embedder=embedder)
@@ -724,8 +761,9 @@ def run_benchmark(
     # --- Retrieval + accuracy (Milvus) ---
     milvus_eval = _evaluate_with_repeats(
         name="Milvus",
-        retrieve_fn=lambda q, k: milvus.retrieve(q, top_k=k),
+        retrieve_fn=lambda emb, k, qid: milvus.retrieve_with_embedding(emb, top_k=k, query_id=qid),
         bench_queries=bench_queries,
+        query_embeddings=query_embeddings,
         top_k=top_k,
         ground_truth=ground_truth,
         evaluator=evaluator,
@@ -752,8 +790,9 @@ def run_benchmark(
     # --- Retrieval + accuracy (ElasticSearch) ---
     elasticsearch_eval = _evaluate_with_repeats(
         name="ElasticSearch",
-        retrieve_fn=lambda q, k: elasticsearch.retrieve(q, top_k=k),
+        retrieve_fn=lambda emb, k, qid: elasticsearch.retrieve_with_embedding(emb, top_k=k, query_id=qid),
         bench_queries=bench_queries,
+        query_embeddings=query_embeddings,
         top_k=top_k,
         ground_truth=ground_truth,
         evaluator=evaluator,
@@ -780,8 +819,9 @@ def run_benchmark(
     # --- Retrieval + accuracy (Weaviate) ---
     weaviate_eval = _evaluate_with_repeats(
         name="Weaviate",
-        retrieve_fn=lambda q, k: weaviate.retrieve(q, top_k=k),
+        retrieve_fn=lambda emb, k, qid: weaviate.retrieve_with_embedding(emb, top_k=k, query_id=qid),
         bench_queries=bench_queries,
+        query_embeddings=query_embeddings,
         top_k=top_k,
         ground_truth=ground_truth,
         evaluator=evaluator,
@@ -794,47 +834,88 @@ def run_benchmark(
     weaviate_std = weaviate_eval["metrics_std"]
     weaviate_recall = weaviate_mean.get(recall_key, float("nan"))
 
-    avg_chroma_ms = chroma_eval["avg_ms_mean"]
-    avg_chroma_ms_std = chroma_eval["avg_ms_std"]
-    p50_chroma_ms = chroma_eval["p50_ms_mean"]
-    p50_chroma_ms_std = chroma_eval["p50_ms_std"]
-    p95_chroma_ms = chroma_eval["p95_ms_mean"]
-    p95_chroma_ms_std = chroma_eval["p95_ms_std"]
+    # eval dicts hold search-only latency (retrieve_with_embedding only). The
+    # legacy combined "retrieval_*_ms" fields (embed + search, kept for backward
+    # compatibility) are derived by adding the shared query_embedding_avg_ms offset.
+    search_only_avg_chroma_ms = chroma_eval["avg_ms_mean"]
+    search_only_avg_chroma_ms_std = chroma_eval["avg_ms_std"]
+    search_only_p50_chroma_ms = chroma_eval["p50_ms_mean"]
+    search_only_p50_chroma_ms_std = chroma_eval["p50_ms_std"]
+    search_only_p95_chroma_ms = chroma_eval["p95_ms_mean"]
+    search_only_p95_chroma_ms_std = chroma_eval["p95_ms_std"]
+    avg_chroma_ms = search_only_avg_chroma_ms + query_embedding_avg_ms
+    avg_chroma_ms_std = search_only_avg_chroma_ms_std
+    p50_chroma_ms = search_only_p50_chroma_ms + query_embedding_avg_ms
+    p50_chroma_ms_std = search_only_p50_chroma_ms_std
+    p95_chroma_ms = search_only_p95_chroma_ms + query_embedding_avg_ms
+    p95_chroma_ms_std = search_only_p95_chroma_ms_std
 
-    avg_qdrant_ms = qdrant_eval["avg_ms_mean"]
-    avg_qdrant_ms_std = qdrant_eval["avg_ms_std"]
-    p50_qdrant_ms = qdrant_eval["p50_ms_mean"]
-    p50_qdrant_ms_std = qdrant_eval["p50_ms_std"]
-    p95_qdrant_ms = qdrant_eval["p95_ms_mean"]
-    p95_qdrant_ms_std = qdrant_eval["p95_ms_std"]
+    search_only_avg_qdrant_ms = qdrant_eval["avg_ms_mean"]
+    search_only_avg_qdrant_ms_std = qdrant_eval["avg_ms_std"]
+    search_only_p50_qdrant_ms = qdrant_eval["p50_ms_mean"]
+    search_only_p50_qdrant_ms_std = qdrant_eval["p50_ms_std"]
+    search_only_p95_qdrant_ms = qdrant_eval["p95_ms_mean"]
+    search_only_p95_qdrant_ms_std = qdrant_eval["p95_ms_std"]
+    avg_qdrant_ms = search_only_avg_qdrant_ms + query_embedding_avg_ms
+    avg_qdrant_ms_std = search_only_avg_qdrant_ms_std
+    p50_qdrant_ms = search_only_p50_qdrant_ms + query_embedding_avg_ms
+    p50_qdrant_ms_std = search_only_p50_qdrant_ms_std
+    p95_qdrant_ms = search_only_p95_qdrant_ms + query_embedding_avg_ms
+    p95_qdrant_ms_std = search_only_p95_qdrant_ms_std
 
-    avg_faiss_ms = faiss_eval["avg_ms_mean"]
-    avg_faiss_ms_std = faiss_eval["avg_ms_std"]
-    p50_faiss_ms = faiss_eval["p50_ms_mean"]
-    p50_faiss_ms_std = faiss_eval["p50_ms_std"]
-    p95_faiss_ms = faiss_eval["p95_ms_mean"]
-    p95_faiss_ms_std = faiss_eval["p95_ms_std"]
+    if include_faiss:
+        assert faiss_eval is not None
+        search_only_avg_faiss_ms = faiss_eval["avg_ms_mean"]
+        search_only_avg_faiss_ms_std = faiss_eval["avg_ms_std"]
+        search_only_p50_faiss_ms = faiss_eval["p50_ms_mean"]
+        search_only_p50_faiss_ms_std = faiss_eval["p50_ms_std"]
+        search_only_p95_faiss_ms = faiss_eval["p95_ms_mean"]
+        search_only_p95_faiss_ms_std = faiss_eval["p95_ms_std"]
+        avg_faiss_ms = search_only_avg_faiss_ms + query_embedding_avg_ms
+        avg_faiss_ms_std = search_only_avg_faiss_ms_std
+        p50_faiss_ms = search_only_p50_faiss_ms + query_embedding_avg_ms
+        p50_faiss_ms_std = search_only_p50_faiss_ms_std
+        p95_faiss_ms = search_only_p95_faiss_ms + query_embedding_avg_ms
+        p95_faiss_ms_std = search_only_p95_faiss_ms_std
 
-    avg_milvus_ms = milvus_eval["avg_ms_mean"]
-    avg_milvus_ms_std = milvus_eval["avg_ms_std"]
-    p50_milvus_ms = milvus_eval["p50_ms_mean"]
-    p50_milvus_ms_std = milvus_eval["p50_ms_std"]
-    p95_milvus_ms = milvus_eval["p95_ms_mean"]
-    p95_milvus_ms_std = milvus_eval["p95_ms_std"]
+    search_only_avg_milvus_ms = milvus_eval["avg_ms_mean"]
+    search_only_avg_milvus_ms_std = milvus_eval["avg_ms_std"]
+    search_only_p50_milvus_ms = milvus_eval["p50_ms_mean"]
+    search_only_p50_milvus_ms_std = milvus_eval["p50_ms_std"]
+    search_only_p95_milvus_ms = milvus_eval["p95_ms_mean"]
+    search_only_p95_milvus_ms_std = milvus_eval["p95_ms_std"]
+    avg_milvus_ms = search_only_avg_milvus_ms + query_embedding_avg_ms
+    avg_milvus_ms_std = search_only_avg_milvus_ms_std
+    p50_milvus_ms = search_only_p50_milvus_ms + query_embedding_avg_ms
+    p50_milvus_ms_std = search_only_p50_milvus_ms_std
+    p95_milvus_ms = search_only_p95_milvus_ms + query_embedding_avg_ms
+    p95_milvus_ms_std = search_only_p95_milvus_ms_std
 
-    avg_elasticsearch_ms = elasticsearch_eval["avg_ms_mean"]
-    avg_elasticsearch_ms_std = elasticsearch_eval["avg_ms_std"]
-    p50_elasticsearch_ms = elasticsearch_eval["p50_ms_mean"]
-    p50_elasticsearch_ms_std = elasticsearch_eval["p50_ms_std"]
-    p95_elasticsearch_ms = elasticsearch_eval["p95_ms_mean"]
-    p95_elasticsearch_ms_std = elasticsearch_eval["p95_ms_std"]
+    search_only_avg_elasticsearch_ms = elasticsearch_eval["avg_ms_mean"]
+    search_only_avg_elasticsearch_ms_std = elasticsearch_eval["avg_ms_std"]
+    search_only_p50_elasticsearch_ms = elasticsearch_eval["p50_ms_mean"]
+    search_only_p50_elasticsearch_ms_std = elasticsearch_eval["p50_ms_std"]
+    search_only_p95_elasticsearch_ms = elasticsearch_eval["p95_ms_mean"]
+    search_only_p95_elasticsearch_ms_std = elasticsearch_eval["p95_ms_std"]
+    avg_elasticsearch_ms = search_only_avg_elasticsearch_ms + query_embedding_avg_ms
+    avg_elasticsearch_ms_std = search_only_avg_elasticsearch_ms_std
+    p50_elasticsearch_ms = search_only_p50_elasticsearch_ms + query_embedding_avg_ms
+    p50_elasticsearch_ms_std = search_only_p50_elasticsearch_ms_std
+    p95_elasticsearch_ms = search_only_p95_elasticsearch_ms + query_embedding_avg_ms
+    p95_elasticsearch_ms_std = search_only_p95_elasticsearch_ms_std
 
-    avg_weaviate_ms = weaviate_eval["avg_ms_mean"]
-    avg_weaviate_ms_std = weaviate_eval["avg_ms_std"]
-    p50_weaviate_ms = weaviate_eval["p50_ms_mean"]
-    p50_weaviate_ms_std = weaviate_eval["p50_ms_std"]
-    p95_weaviate_ms = weaviate_eval["p95_ms_mean"]
-    p95_weaviate_ms_std = weaviate_eval["p95_ms_std"]
+    search_only_avg_weaviate_ms = weaviate_eval["avg_ms_mean"]
+    search_only_avg_weaviate_ms_std = weaviate_eval["avg_ms_std"]
+    search_only_p50_weaviate_ms = weaviate_eval["p50_ms_mean"]
+    search_only_p50_weaviate_ms_std = weaviate_eval["p50_ms_std"]
+    search_only_p95_weaviate_ms = weaviate_eval["p95_ms_mean"]
+    search_only_p95_weaviate_ms_std = weaviate_eval["p95_ms_std"]
+    avg_weaviate_ms = search_only_avg_weaviate_ms + query_embedding_avg_ms
+    avg_weaviate_ms_std = search_only_avg_weaviate_ms_std
+    p50_weaviate_ms = search_only_p50_weaviate_ms + query_embedding_avg_ms
+    p50_weaviate_ms_std = search_only_p50_weaviate_ms_std
+    p95_weaviate_ms = search_only_p95_weaviate_ms + query_embedding_avg_ms
+    p95_weaviate_ms_std = search_only_p95_weaviate_ms_std
 
     chroma_block = {
         "indexing": {
@@ -856,16 +937,19 @@ def run_benchmark(
             "cpu_percent": round(qdrant_retrieval_stats.avg_cpu_percent, 2),
         },
     }
-    faiss_block = {
-        "indexing": {
-            "memory_usage_mb": round(faiss_index_stats.peak_memory_mb, 3),
-            "cpu_percent": round(faiss_index_stats.avg_cpu_percent, 2),
-        },
-        "retrieval": {
-            "memory_usage_mb": round(faiss_retrieval_stats.peak_memory_mb, 3),
-            "cpu_percent": round(faiss_retrieval_stats.avg_cpu_percent, 2),
-        },
-    }
+    faiss_block: dict[str, Any] | None = None
+    if include_faiss:
+        assert faiss_index_stats is not None
+        faiss_block = {
+            "indexing": {
+                "memory_usage_mb": round(faiss_index_stats.peak_memory_mb, 3),
+                "cpu_percent": round(faiss_index_stats.avg_cpu_percent, 2),
+            },
+            "retrieval": {
+                "memory_usage_mb": round(faiss_retrieval_stats.peak_memory_mb, 3),
+                "cpu_percent": round(faiss_retrieval_stats.avg_cpu_percent, 2),
+            },
+        }
     milvus_block = {
         "indexing": {
             "memory_usage_mb": round(milvus_index_stats.peak_memory_mb, 3),
@@ -901,21 +985,24 @@ def run_benchmark(
     effective_config = {
         "chroma": chroma.describe_index(),
         "qdrant": qdrant.describe_index(),
-        "faiss": faiss.describe_index(),
         "milvus": milvus.describe_index(),
         "elasticsearch": elasticsearch.describe_index(),
         "weaviate": weaviate.describe_index(),
     }
+    if include_faiss:
+        assert faiss is not None
+        effective_config["faiss"] = faiss.describe_index()
     validate_effective_config(effective_config)
 
     disk_size_info = {
         "chroma": measure_disk_size_mb("chroma", chroma_cfg.persist_directory),
         "qdrant": measure_disk_size_mb("qdrant", None),
-        "faiss": measure_disk_size_mb("faiss", faiss_cfg.persist_path),
         "milvus": measure_disk_size_mb("milvus", None),
         "elasticsearch": measure_disk_size_mb("elasticsearch", None),
         "weaviate": measure_disk_size_mb("weaviate", None),
     }
+    if include_faiss:
+        disk_size_info["faiss"] = measure_disk_size_mb("faiss", faiss_cfg.persist_path)
 
     ret_dict = {
         "squad_version": squad_version,
@@ -932,15 +1019,45 @@ def run_benchmark(
         "top_k": top_k,
         "num_repeats": num_repeats,
         "embedding_seconds": embedding_seconds,
+        "query_embedding_total_ms": query_embedding_total_ms,
+        "query_embedding_avg_ms": query_embedding_avg_ms,
+        "search_only_avg_ms_chroma": search_only_avg_chroma_ms,
+        "search_only_avg_ms_std_chroma": search_only_avg_chroma_ms_std,
+        "search_only_p50_ms_chroma": search_only_p50_chroma_ms,
+        "search_only_p50_ms_std_chroma": search_only_p50_chroma_ms_std,
+        "search_only_p95_ms_chroma": search_only_p95_chroma_ms,
+        "search_only_p95_ms_std_chroma": search_only_p95_chroma_ms_std,
+        "search_only_avg_ms_qdrant": search_only_avg_qdrant_ms,
+        "search_only_avg_ms_std_qdrant": search_only_avg_qdrant_ms_std,
+        "search_only_p50_ms_qdrant": search_only_p50_qdrant_ms,
+        "search_only_p50_ms_std_qdrant": search_only_p50_qdrant_ms_std,
+        "search_only_p95_ms_qdrant": search_only_p95_qdrant_ms,
+        "search_only_p95_ms_std_qdrant": search_only_p95_qdrant_ms_std,
+        "search_only_avg_ms_milvus": search_only_avg_milvus_ms,
+        "search_only_avg_ms_std_milvus": search_only_avg_milvus_ms_std,
+        "search_only_p50_ms_milvus": search_only_p50_milvus_ms,
+        "search_only_p50_ms_std_milvus": search_only_p50_milvus_ms_std,
+        "search_only_p95_ms_milvus": search_only_p95_milvus_ms,
+        "search_only_p95_ms_std_milvus": search_only_p95_milvus_ms_std,
+        "search_only_avg_ms_elasticsearch": search_only_avg_elasticsearch_ms,
+        "search_only_avg_ms_std_elasticsearch": search_only_avg_elasticsearch_ms_std,
+        "search_only_p50_ms_elasticsearch": search_only_p50_elasticsearch_ms,
+        "search_only_p50_ms_std_elasticsearch": search_only_p50_elasticsearch_ms_std,
+        "search_only_p95_ms_elasticsearch": search_only_p95_elasticsearch_ms,
+        "search_only_p95_ms_std_elasticsearch": search_only_p95_elasticsearch_ms_std,
+        "search_only_avg_ms_weaviate": search_only_avg_weaviate_ms,
+        "search_only_avg_ms_std_weaviate": search_only_avg_weaviate_ms_std,
+        "search_only_p50_ms_weaviate": search_only_p50_weaviate_ms,
+        "search_only_p50_ms_std_weaviate": search_only_p50_weaviate_ms_std,
+        "search_only_p95_ms_weaviate": search_only_p95_weaviate_ms,
+        "search_only_p95_ms_std_weaviate": search_only_p95_weaviate_ms_std,
         "chroma_add_seconds": chroma_add_seconds,
         "qdrant_add_seconds": qdrant_add_seconds,
-        "faiss_add_seconds": faiss_add_seconds,
         "milvus_add_seconds": milvus_add_seconds,
         "elasticsearch_add_seconds": elasticsearch_add_seconds,
         "weaviate_add_seconds": weaviate_add_seconds,
         "chroma_indexing_total_seconds": embedding_seconds + chroma_add_seconds,
         "qdrant_indexing_total_seconds": embedding_seconds + qdrant_add_seconds,
-        "faiss_indexing_total_seconds": embedding_seconds + faiss_add_seconds,
         "milvus_indexing_total_seconds": embedding_seconds + milvus_add_seconds,
         "elasticsearch_indexing_total_seconds": embedding_seconds + elasticsearch_add_seconds,
         "weaviate_indexing_total_seconds": embedding_seconds + weaviate_add_seconds,
@@ -956,12 +1073,6 @@ def run_benchmark(
         "retrieval_p50_ms_std_qdrant": p50_qdrant_ms_std,
         "retrieval_p95_ms_qdrant": p95_qdrant_ms,
         "retrieval_p95_ms_std_qdrant": p95_qdrant_ms_std,
-        "retrieval_avg_ms_faiss": avg_faiss_ms,
-        "retrieval_avg_ms_std_faiss": avg_faiss_ms_std,
-        "retrieval_p50_ms_faiss": p50_faiss_ms,
-        "retrieval_p50_ms_std_faiss": p50_faiss_ms_std,
-        "retrieval_p95_ms_faiss": p95_faiss_ms,
-        "retrieval_p95_ms_std_faiss": p95_faiss_ms_std,
         "retrieval_avg_ms_milvus": avg_milvus_ms,
         "retrieval_avg_ms_std_milvus": avg_milvus_ms_std,
         "retrieval_p50_ms_milvus": p50_milvus_ms,
@@ -983,45 +1094,60 @@ def run_benchmark(
         "recall_at_k_metric": recall_key,
         "mean_recall_chroma": chroma_recall,
         "mean_recall_qdrant": qdrant_recall,
-        "mean_recall_faiss": faiss_recall,
         "mean_recall_milvus": milvus_recall,
         "mean_recall_elasticsearch": elasticsearch_recall,
         "mean_recall_weaviate": weaviate_recall,
         "mean_metrics_chroma": chroma_mean,
         "mean_metrics_qdrant": qdrant_mean,
-        "mean_metrics_faiss": faiss_mean,
         "mean_metrics_milvus": milvus_mean,
         "mean_metrics_elasticsearch": elasticsearch_mean,
         "mean_metrics_weaviate": weaviate_mean,
         "std_metrics_chroma": chroma_std,
         "std_metrics_qdrant": qdrant_std,
-        "std_metrics_faiss": faiss_std,
         "std_metrics_milvus": milvus_std,
         "std_metrics_elasticsearch": elasticsearch_std,
         "std_metrics_weaviate": weaviate_std,
         "chroma": chroma_block,
         "qdrant": qdrant_block,
-        "faiss": faiss_block,
         "milvus": milvus_block,
         "elasticsearch": elasticsearch_block,
         "weaviate": weaviate_block,
         "winner_faster_retrieval": _winner_speed_multi({
             "ChromaDB": avg_chroma_ms,
             "Qdrant": avg_qdrant_ms,
-            "FAISS": avg_faiss_ms,
             "Milvus": avg_milvus_ms,
             "ElasticSearch": avg_elasticsearch_ms,
             "Weaviate": avg_weaviate_ms,
+            **({"FAISS": avg_faiss_ms} if include_faiss else {}),
         }),
         "winner_higher_recall": _winner_recall_multi({
             "ChromaDB": chroma_recall,
             "Qdrant": qdrant_recall,
-            "FAISS": faiss_recall,
             "Milvus": milvus_recall,
             "ElasticSearch": elasticsearch_recall,
             "Weaviate": weaviate_recall,
+            **({"FAISS": faiss_recall} if include_faiss else {}),
         }),
     }
+    if include_faiss:
+        ret_dict["faiss_add_seconds"] = faiss_add_seconds
+        ret_dict["faiss_indexing_total_seconds"] = embedding_seconds + faiss_add_seconds
+        ret_dict["retrieval_avg_ms_faiss"] = avg_faiss_ms
+        ret_dict["retrieval_avg_ms_std_faiss"] = avg_faiss_ms_std
+        ret_dict["retrieval_p50_ms_faiss"] = p50_faiss_ms
+        ret_dict["retrieval_p50_ms_std_faiss"] = p50_faiss_ms_std
+        ret_dict["retrieval_p95_ms_faiss"] = p95_faiss_ms
+        ret_dict["retrieval_p95_ms_std_faiss"] = p95_faiss_ms_std
+        ret_dict["mean_recall_faiss"] = faiss_recall
+        ret_dict["mean_metrics_faiss"] = faiss_mean
+        ret_dict["std_metrics_faiss"] = faiss_std
+        ret_dict["faiss"] = faiss_block
+        ret_dict["search_only_avg_ms_faiss"] = search_only_avg_faiss_ms
+        ret_dict["search_only_avg_ms_std_faiss"] = search_only_avg_faiss_ms_std
+        ret_dict["search_only_p50_ms_faiss"] = search_only_p50_faiss_ms
+        ret_dict["search_only_p50_ms_std_faiss"] = search_only_p50_faiss_ms_std
+        ret_dict["search_only_p95_ms_faiss"] = search_only_p95_faiss_ms
+        ret_dict["search_only_p95_ms_std_faiss"] = search_only_p95_faiss_ms_std
 
     for db_name, info in disk_size_info.items():
         ret_dict[f"disk_size_mb_{db_name}"] = info.get("disk_size_mb")
@@ -1035,10 +1161,12 @@ def run_benchmark(
     if dump_per_query:
         ret_dict["per_query_details_chroma"] = chroma_eval["per_query_details"]
         ret_dict["per_query_details_qdrant"] = qdrant_eval["per_query_details"]
-        ret_dict["per_query_details_faiss"] = faiss_eval["per_query_details"]
         ret_dict["per_query_details_milvus"] = milvus_eval["per_query_details"]
         ret_dict["per_query_details_elasticsearch"] = elasticsearch_eval["per_query_details"]
         ret_dict["per_query_details_weaviate"] = weaviate_eval["per_query_details"]
+        if include_faiss:
+            assert faiss_eval is not None
+            ret_dict["per_query_details_faiss"] = faiss_eval["per_query_details"]
     return ret_dict
 
 
@@ -1064,7 +1192,7 @@ def _print_table(report: dict[str, Any]) -> None:
     dbs = [
         ("ChromaDB", "chroma"),
         ("Qdrant", "qdrant"),
-        ("FAISS", "faiss"),
+        *([("FAISS", "faiss")] if "mean_recall_faiss" in report else []),
         ("Milvus", "milvus"),
         ("ElasticSearch", "elasticsearch"),
         ("Weaviate", "weaviate"),
@@ -1091,6 +1219,8 @@ def _print_table(report: dict[str, Any]) -> None:
                 res[db_name] = report.get(f"retrieval_p50_ms_{key}", 0.0)
             elif metric_type == "ret_p95":
                 res[db_name] = report.get(f"retrieval_p95_ms_{key}", 0.0)
+            elif metric_type == "search_only_p50":
+                res[db_name] = report.get(f"search_only_p50_ms_{key}", 0.0)
             elif metric_type == "ret_mem":
                 block = report.get(key, {})
                 res[db_name] = block.get("retrieval", {}).get("memory_usage_mb", 0.0) if block else 0.0
@@ -1129,22 +1259,27 @@ def _print_table(report: dict[str, Any]) -> None:
 
         return f"{title:<50} | " + " | ".join(cell_strings)
 
-    print("\n" + "=" * 165)
+    header = f"{'Metrik':<50} | " + " | ".join(f"{db_name:>16}" for db_name, _ in dbs)
+    sep_width = len(header)
+
+    print("\n" + "=" * sep_width)
     print("VECTOR DB BENCHMARK (SQuAD — LLM devre dışı, sadece embed + retrieval)")
-    print("=" * 165)
+    print("=" * sep_width)
     print(
         f"Splits: {report.get('splits_used')}  |  "
         f"Döküman: {report['num_documents']}  |  "
         f"Chunk: {report['num_chunks']}  |  "
-        f"Soru: {report['num_queries_evaluated']}  |  top_k={report['top_k']}"
+        f"Soru: {report['num_queries_evaluated']}  |  top_k={report['top_k']}  |  "
+        f"query embed (ort.): {report.get('query_embedding_avg_ms', float('nan')):.2f} ms"
     )
-    print("-" * 165)
-    print(f"{'Metrik':<50} | {'ChromaDB':>16} | {'Qdrant':>16} | {'FAISS':>16} | {'Milvus':>16} | {'ElasticSearch':>16} | {'Weaviate':>16}")
-    print("-" * 165)
-    print(
-        f"{'İndeksleme: embedding (ortak, tek geçiş) [s]':<50} | "
-        f"{report['embedding_seconds']:16.3f} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16}"
+    print("-" * sep_width)
+    print(header)
+    print("-" * sep_width)
+    embedding_row_cells = " | ".join(
+        f"{report['embedding_seconds']:>16.3f}" if db_name == "ChromaDB" else f"{'—':>16}"
+        for db_name, _ in dbs
     )
+    print(f"{'İndeksleme: embedding (ortak, tek geçiş) [s]':<50} | " + embedding_row_cells)
     print(format_row("İndeksleme: DB yazma (add_chunks) [s]", get_val("add_seconds", ""), fmt=".3f", higher_is_better=False))
     print(format_row("İndeksleme: peak RAM (RSS) [MB]", get_val("idx_mem", ""), fmt=".3f", higher_is_better=False))
     print(format_row("İndeksleme: ort. CPU [%]", get_val("idx_cpu", ""), fmt=".2f", higher_is_better=False))
@@ -1152,6 +1287,7 @@ def _print_table(report: dict[str, Any]) -> None:
     
     print(format_row("Ortalama retrieval [ms] (sorgu embed + arama)", get_val("ret_avg", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p50 retrieval latency [ms]", get_val("ret_p50", ""), fmt=".2f", higher_is_better=False))
+    print(format_row("p50 search-only latency [ms] (embed hariç)", get_val("search_only_p50", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p95 retrieval latency [ms]", get_val("ret_p95", ""), fmt=".2f", higher_is_better=False))
     
     print(format_row("Retrieval: peak RAM (RSS) [MB]", get_val("ret_mem", ""), fmt=".3f", higher_is_better=False))
@@ -1160,7 +1296,7 @@ def _print_table(report: dict[str, Any]) -> None:
     print(format_row(f"Ortalama {ck}", get_val("recall", ""), fmt=".4f", higher_is_better=True))
     print(format_row("Ortalama MRR", get_val("mrr", ""), fmt=".4f", higher_is_better=True))
     print(format_row("Ortalama nDCG@10", get_val("ndcg10", ""), fmt=".4f", higher_is_better=True))
-    print("-" * 165)
+    print("-" * sep_width)
 
     p50_dict = get_val("ret_p50", "")
     valid_p50 = {k: v for k, v in p50_dict.items() if v is not None and isinstance(v, (int, float)) and v == v}
@@ -1174,7 +1310,7 @@ def _print_table(report: dict[str, Any]) -> None:
 
     summary_line = f"En hızlı (p50): {fastest_db} {fastest_p50:.1f}ms | En yüksek MRR: {best_mrr_db} {best_mrr_val:.3f}"
     print(summary_line)
-    print("=" * 165 + "\n")
+    print("=" * sep_width + "\n")
 
 
 def main() -> None:
@@ -1219,6 +1355,19 @@ def main() -> None:
         "--dump-per-query",
         action="store_true",
         help="Her sorgu için metrikleri ayrı bir dosyaya dök.",
+    )
+    parser.add_argument(
+        "--include-faiss",
+        action="store_true",
+        help="FAISS'i sistematik benchmark'a dahil et. Varsayılan: kapalı — FAISS "
+        "in-process bir kütüphane (ağ katmanı yok) ve Docker'daki diğer DB'lerle "
+        "adil karşılaştırılamıyor (bkz. CLAUDE.md Pinecone deseni).",
+    )
+    parser.add_argument(
+        "--output-tag",
+        type=str,
+        default=None,
+        help="Sonuç dosya adına eklenecek opsiyonel ekstra etiket, ör. 'V2' veya 'chunk256'.",
     )
     parser.add_argument(
         "--fixed-query-file",
@@ -1303,6 +1452,7 @@ def main() -> None:
         fixed_query_ids=fixed_query_ids,
         query_seed=args.query_seed,
         dump_per_query=args.dump_per_query,
+        include_faiss=args.include_faiss,
     )
 
     _print_table(report)
@@ -1337,7 +1487,11 @@ def main() -> None:
         )
 
     num_docs = report["num_documents"]
-    out_path = os.path.join(out_dir, f"official_scale_{num_docs}docs_6db_topk{top_k}_{ts}.json")
+    db_count = 6 if args.include_faiss else 5
+    tag_part = f"_{args.output_tag}" if args.output_tag else ""
+    out_path = os.path.join(
+        out_dir, f"official_scale{tag_part}_{num_docs}docs_{db_count}db_topk{top_k}_{ts}.json"
+    )
     payload = {
         "timestamp": ts,
         "config_path": os.path.abspath(args.config) if args.config else None,

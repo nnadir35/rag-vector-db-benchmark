@@ -341,12 +341,18 @@ class QdrantRetriever(Retriever):
             raise RuntimeError(f"Failed to retrieve from Qdrant: {e}") from e
 
     def clear(self) -> None:
-        """Clear the collection."""
+        """Clear the collection.
+
+        Always attempts server-side deletion via a live client, regardless of
+        in-process ``_collection_ready`` state — a fresh ``QdrantRetriever`` (e.g.
+        the start of every benchmark_db.py process) starts with ``_collection_ready
+        = False`` even though a same-named collection may already exist on a
+        persistent Qdrant server from a prior run. Skipping the delete in that case
+        silently accumulates stale points across runs. ``delete_collection`` is a
+        no-op (returns False, does not raise) when the collection does not exist.
+        """
         try:
-            if self._client is not None and self._collection_ready:
-                self._get_client().delete_collection(
-                    collection_name=self._config.collection_name
-                )
+            self._get_client().delete_collection(collection_name=self._config.collection_name)
             self._collection_ready = False
         except Exception as e:
             raise RuntimeError(f"Failed to clear Qdrant: {e}") from e

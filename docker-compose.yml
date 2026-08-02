@@ -73,7 +73,7 @@ services:
       retries: 5
 
   chroma:
-    image: chromadb/chroma:0.4.24
+    image: chromadb/chroma:1.5.2
     container_name: chroma_db
     environment:
       - IS_PERSISTENT=TRUE
@@ -85,7 +85,7 @@ services:
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v2/heartbeat || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

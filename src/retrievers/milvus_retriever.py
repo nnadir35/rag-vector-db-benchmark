@@ -209,8 +209,13 @@ class MilvusRetriever(Retriever):
                     "vector": list(emb.vector),
                 })
 
-            client.insert(collection_name=self._config.collection_name, data=entities)
-            
+            batch_size = 25
+            for start in range(0, len(entities), batch_size):
+                client.insert(
+                    collection_name=self._config.collection_name,
+                    data=entities[start : start + batch_size],
+                )
+
             # Flush and load to ensure inserted data is immediately searchable
             if hasattr(client, "flush"):
                 client.flush(collection_name=self._config.collection_name)
