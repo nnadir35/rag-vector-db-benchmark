@@ -34,3 +34,6 @@ pipeline:
 retriever:
   type: qdrant
   in_memory: true
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64

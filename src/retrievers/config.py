@@ -75,11 +75,17 @@ class ChromaRetrieverConfig:
         persist_directory: Optional directory path to persist database. If None,
             runs completely in-memory.
         distance_metric: Default is 'cosine' for most modern embeddings.
+        hnsw_m: HNSW M parameter.
+        hnsw_ef_construction: HNSW ef_construction parameter.
+        hnsw_ef_search: HNSW ef_search parameter.
     """
 
     collection_name: str = field(default="squad_benchmark")
     persist_directory: str | None = field(default=None)
     distance_metric: str = field(default="cosine")
+    hnsw_m: int = field(default=16)
+    hnsw_ef_construction: int = field(default=200)
+    hnsw_ef_search: int = field(default=64)
 
     def __post_init__(self) -> None:
         """Validate configuration parameters."""
@@ -101,12 +107,18 @@ class QdrantRetrieverConfig:
             align with Chroma-style names: 'cosine', 'l2' (or 'euclidean'), 'ip' (or 'dot').
         in_memory: If True, use an ephemeral in-memory Qdrant instance (``:memory:``).
         persist_path: When ``in_memory`` is False, local persistence directory for Qdrant.
+        hnsw_m: HNSW M parameter.
+        hnsw_ef_construction: HNSW ef_construction parameter.
+        hnsw_ef_search: HNSW ef_search parameter.
     """
 
     collection_name: str = field(default="rag_benchmark")
     distance_metric: str = field(default="cosine")
     in_memory: bool = field(default=True)
     persist_path: str | None = field(default=None)
+    hnsw_m: int = field(default=16)
+    hnsw_ef_construction: int = field(default=200)
+    hnsw_ef_search: int = field(default=64)
 
     def __post_init__(self) -> None:
         """Validate configuration parameters."""
@@ -135,23 +147,33 @@ class FAISSRetrieverConfig:
     """Configuration for FAISSRetriever.
 
     Attributes:
-        index_type: FAISS index türü. 'flat_ip' (cosine/dot) veya 'flat_l2' (euclidean).
+        collection_name: Index'i tanımlayan etiket (sonuç metadata'sında kullanılır).
         distance_metric: 'cosine', 'ip', 'l2'. 'cosine' seçilince vektörler
-                         normalize edilir ve flat_ip index kullanılır.
+                         normalize edilir ve IP index kullanılır.
         persist_path: Opsiyonel. Belirtilirse index ve metadata bu .index/.pkl
                       dosya çiftine kaydedilir. None = sadece in-memory.
-        collection_name: Index'i tanımlayan etiket (sonuç metadata'sında kullanılır).
+        index_type: "flat" (exact, referans) veya "hnsw" (approximate, karşılaştırma).
+        hnsw_m: HNSW M parameter.
+        hnsw_ef_construction: HNSW ef_construction parameter.
+        hnsw_ef_search: HNSW ef_search parameter.
     """
     collection_name: str = field(default="faiss_benchmark")
     distance_metric: str = field(default="cosine")
     persist_path: str | None = field(default=None)
+    index_type: str = field(default="flat")
+    hnsw_m: int = field(default=16)
+    hnsw_ef_construction: int = field(default=200)
+    hnsw_ef_search: int = field(default=64)
 
     def __post_init__(self) -> None:
-        valid = {"cosine", "l2", "ip"}
-        if self.distance_metric not in valid:
+        valid_metrics = {"cosine", "l2", "ip"}
+        if self.distance_metric not in valid_metrics:
             raise ValueError(
-                f"distance_metric must be one of {valid}, got '{self.distance_metric}'"
+                f"distance_metric must be one of {valid_metrics}, got '{self.distance_metric}'"
             )
+        valid_index = {"flat", "hnsw"}
+        if self.index_type not in valid_index:
+            raise ValueError(f"index_type must be one of {valid_index}, got '{self.index_type}'")
         if not self.collection_name:
             raise ValueError("collection_name cannot be empty")
 
@@ -167,11 +189,17 @@ class MilvusRetrieverConfig:
         in_memory: True ise MilvusClient(":memory:") (Milvus Lite) kullanır.
                    Docker/remote için False yap, MILVUS_HOST/MILVUS_PORT set et.
         connection_alias: pymilvus connections için alias (default: "default").
+        hnsw_m: HNSW M parameter.
+        hnsw_ef_construction: HNSW ef_construction parameter.
+        hnsw_ef_search: HNSW ef_search parameter.
     """
     collection_name: str = field(default="milvus_benchmark")
     distance_metric: str = field(default="cosine")
-    in_memory: bool = field(default=True)
+    in_memory: bool = field(default=False)
     connection_alias: str = field(default="default")
+    hnsw_m: int = field(default=16)
+    hnsw_ef_construction: int = field(default=200)
+    hnsw_ef_search: int = field(default=64)
 
     def __post_init__(self) -> None:
         valid = {"cosine", "l2", "ip"}
@@ -199,6 +227,7 @@ class ElasticSearchRetrieverConfig:
         host: Elasticsearch host URL (default http://localhost:9200). Overridden by
             ELASTICSEARCH_HOST environment variable if set.
         dims: Dimension of the embedding vectors (default 384 for MiniLM).
+        num_candidates: Number of candidates for KNN search.
     """
 
     index_name: str = field(default="es_benchmark")
@@ -206,6 +235,7 @@ class ElasticSearchRetrieverConfig:
     in_memory: bool = field(default=True)
     host: str = field(default="http://localhost:9200")
     dims: int = field(default=384)
+    num_candidates: int = field(default=100)
 
     def __post_init__(self) -> None:
         valid = {"cosine", "dot_product", "l2_norm"}
@@ -224,6 +254,9 @@ class ElasticSearchRetrieverConfig:
 class WeaviateRetrieverConfig:
     collection_name: str = "rag_benchmark"
     distance_metric: str = "cosine"   # weaviate: cosine, dot, l2-squared, manhattan, hamming
-    in_memory: bool = True
+    in_memory: bool = field(default=False)
     host: str = "http://localhost:8080"
     dims: int = 384   # all-MiniLM-L6-v2 ile uyumlu, diğer config'lerdeki varsayılanla tutarlı olsun
+    hnsw_m: int = field(default=16)
+    hnsw_ef_construction: int = field(default=200)
+    hnsw_ef_search: int = field(default=64)

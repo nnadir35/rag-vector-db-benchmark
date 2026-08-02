@@ -263,6 +263,7 @@ def run_benchmark(
     k_values: list[int],
     squad_version: str,
     show_progress: bool,
+    fixed_query_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Execute indexing and retrieval benchmarks; return a JSON-serializable report."""
     if top_k not in k_values:
@@ -276,17 +277,32 @@ def run_benchmark(
     )
     doc_ids = {d.id for d in documents}
 
-    bench_queries = _select_queries_for_documents(
-        all_queries, ground_truth, doc_ids, num_queries
-    )
-    if len(bench_queries) < num_queries:
-        logging.warning(
-            "Only %s queries have ground truth inside the selected %s documents "
-            "(requested %s). Using available queries.",
-            len(bench_queries),
-            len(documents),
-            num_queries,
+    if fixed_query_ids is not None:
+        # Sabit set: dışarıdan verilmiş ID listesine filtrele
+        bench_queries = [q for q in all_queries if q.id in fixed_query_ids]
+        # Güvenlik: bu sorguların gold'u gerçekten bu doc_ids içinde mi kontrol et
+        bench_queries = [
+            q for q in bench_queries
+            if ground_truth.get(q.id, set()).issubset(doc_ids)
+        ]
+        if len(bench_queries) < len(fixed_query_ids):
+            logging.warning(
+                "fixed_query_ids has %d IDs but only %d are valid for this scale "
+                "(%d docs). Continuing with %d queries.",
+                len(fixed_query_ids), len(bench_queries), num_documents, len(bench_queries)
+            )
+    else:
+        bench_queries = _select_queries_for_documents(
+            all_queries, ground_truth, doc_ids, num_queries
         )
+        if len(bench_queries) < num_queries:
+            logging.warning(
+                "Only %s queries have ground truth inside the selected %s documents "
+                "(requested %s). Using available queries.",
+                len(bench_queries),
+                len(documents),
+                num_queries,
+            )
 
     logging.info("Chunking %s documents...", len(documents))
     chunker = FixedSizeChunker(chunker_cfg)
@@ -318,11 +334,17 @@ def run_benchmark(
     _, chroma_index_stats = run_with_resource_stats(_chroma_index)
     chroma_add_seconds = time.perf_counter() - t_idx0
 
+    WARMUP_COUNT = 10
+
     # --- Retrieval + accuracy (Chroma) ---
     chroma_latencies_ms: list[float] = []
     chroma_rows: list[dict[str, float]] = []
 
     def _chroma_retrieval_pass() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for q in warmup_queries:
+            chroma.retrieve(q, top_k=top_k)
+
         for q in tqdm(
             bench_queries,
             desc="Chroma retrieval",
@@ -356,6 +378,10 @@ def run_benchmark(
     qdrant_rows: list[dict[str, float]] = []
 
     def _qdrant_retrieval_pass() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for q in warmup_queries:
+            qdrant.retrieve(q, top_k=top_k)
+
         for q in tqdm(
             bench_queries,
             desc="Qdrant retrieval",
@@ -390,6 +416,10 @@ def run_benchmark(
     faiss_rows: list[dict[str, float]] = []
 
     def _faiss_retrieval_pass() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for q in warmup_queries:
+            faiss.retrieve(q, top_k=top_k)
+
         for q in tqdm(
             bench_queries,
             desc="FAISS retrieval",
@@ -424,6 +454,10 @@ def run_benchmark(
     milvus_rows: list[dict[str, float]] = []
 
     def _milvus_retrieval_pass() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for q in warmup_queries:
+            milvus.retrieve(q, top_k=top_k)
+
         for q in tqdm(
             bench_queries,
             desc="Milvus retrieval",
@@ -458,6 +492,10 @@ def run_benchmark(
     elasticsearch_rows: list[dict[str, float]] = []
 
     def _elasticsearch_retrieval_pass() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for q in warmup_queries:
+            elasticsearch.retrieve(q, top_k=top_k)
+
         for q in tqdm(
             bench_queries,
             desc="ElasticSearch retrieval",
@@ -492,6 +530,10 @@ def run_benchmark(
     weaviate_rows: list[dict[str, float]] = []
 
     def _weaviate_retrieval_pass() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for q in warmup_queries:
+            weaviate.retrieve(q, top_k=top_k)
+
         for q in tqdm(
             bench_queries,
             desc="Weaviate retrieval",
@@ -510,12 +552,34 @@ def run_benchmark(
     weaviate_mean = _mean_metrics(weaviate_rows)
     weaviate_recall = weaviate_mean.get(recall_key, float("nan"))
 
+    import numpy as np
+
+    def _percentile(values: list[float], p: float) -> float:
+        return float(np.percentile(values, p)) if values else float("nan")
+
     avg_chroma_ms = _mean(chroma_latencies_ms)
+    p50_chroma_ms = _percentile(chroma_latencies_ms, 50)
+    p95_chroma_ms = _percentile(chroma_latencies_ms, 95)
+
     avg_qdrant_ms = _mean(qdrant_latencies_ms)
+    p50_qdrant_ms = _percentile(qdrant_latencies_ms, 50)
+    p95_qdrant_ms = _percentile(qdrant_latencies_ms, 95)
+
     avg_faiss_ms = _mean(faiss_latencies_ms)
+    p50_faiss_ms = _percentile(faiss_latencies_ms, 50)
+    p95_faiss_ms = _percentile(faiss_latencies_ms, 95)
+
     avg_milvus_ms = _mean(milvus_latencies_ms)
+    p50_milvus_ms = _percentile(milvus_latencies_ms, 50)
+    p95_milvus_ms = _percentile(milvus_latencies_ms, 95)
+
     avg_elasticsearch_ms = _mean(elasticsearch_latencies_ms)
+    p50_elasticsearch_ms = _percentile(elasticsearch_latencies_ms, 50)
+    p95_elasticsearch_ms = _percentile(elasticsearch_latencies_ms, 95)
+
     avg_weaviate_ms = _mean(weaviate_latencies_ms)
+    p50_weaviate_ms = _percentile(weaviate_latencies_ms, 50)
+    p95_weaviate_ms = _percentile(weaviate_latencies_ms, 95)
 
     chroma_block = {
         "indexing": {
@@ -581,6 +645,8 @@ def run_benchmark(
     return {
         "squad_version": squad_version,
         "splits_used": splits_used,
+        "fixed_query_set": fixed_query_ids is not None,
+        "query_ids_used": [q.id for q in bench_queries],
         "num_documents": len(documents),
         "num_chunks": len(chunks),
         "num_queries_evaluated": len(bench_queries),
@@ -599,11 +665,23 @@ def run_benchmark(
         "elasticsearch_indexing_total_seconds": embedding_seconds + elasticsearch_add_seconds,
         "weaviate_indexing_total_seconds": embedding_seconds + weaviate_add_seconds,
         "retrieval_avg_ms_chroma": avg_chroma_ms,
+        "retrieval_p50_ms_chroma": p50_chroma_ms,
+        "retrieval_p95_ms_chroma": p95_chroma_ms,
         "retrieval_avg_ms_qdrant": avg_qdrant_ms,
+        "retrieval_p50_ms_qdrant": p50_qdrant_ms,
+        "retrieval_p95_ms_qdrant": p95_qdrant_ms,
         "retrieval_avg_ms_faiss": avg_faiss_ms,
+        "retrieval_p50_ms_faiss": p50_faiss_ms,
+        "retrieval_p95_ms_faiss": p95_faiss_ms,
         "retrieval_avg_ms_milvus": avg_milvus_ms,
+        "retrieval_p50_ms_milvus": p50_milvus_ms,
+        "retrieval_p95_ms_milvus": p95_milvus_ms,
         "retrieval_avg_ms_elasticsearch": avg_elasticsearch_ms,
+        "retrieval_p50_ms_elasticsearch": p50_elasticsearch_ms,
+        "retrieval_p95_ms_elasticsearch": p95_elasticsearch_ms,
         "retrieval_avg_ms_weaviate": avg_weaviate_ms,
+        "retrieval_p50_ms_weaviate": p50_weaviate_ms,
+        "retrieval_p95_ms_weaviate": p95_weaviate_ms,
         "recall_at_k_metric": recall_key,
         "mean_recall_chroma": chroma_recall,
         "mean_recall_qdrant": qdrant_recall,
@@ -764,11 +842,11 @@ def main() -> None:
         elasticsearch_dict = {k: v for k, v in raw.get("elasticsearch_retriever", {}).items() if k != "type"}
         weaviate_dict = {k: v for k, v in raw.get("weaviate_retriever", {}).items() if k != "type"}
         chroma_cfg = ChromaRetrieverConfig(**chroma_dict) if chroma_dict else ChromaRetrieverConfig()
-        qdrant_cfg = QdrantRetrieverConfig(**qdrant_dict) if qdrant_dict else QdrantRetrieverConfig()
+        qdrant_cfg = QdrantRetrieverConfig(**qdrant_dict) if qdrant_dict else QdrantRetrieverConfig(in_memory=True)
         faiss_cfg = FAISSRetrieverConfig(**faiss_dict) if faiss_dict else FAISSRetrieverConfig()
         milvus_cfg = MilvusRetrieverConfig(**milvus_dict) if milvus_dict else MilvusRetrieverConfig(in_memory=True)
-        elasticsearch_cfg = ElasticSearchRetrieverConfig(**elasticsearch_dict) if elasticsearch_dict else ElasticSearchRetrieverConfig()
-        weaviate_cfg = WeaviateRetrieverConfig(**weaviate_dict) if weaviate_dict else WeaviateRetrieverConfig()
+        elasticsearch_cfg = ElasticSearchRetrieverConfig(**elasticsearch_dict) if elasticsearch_dict else ElasticSearchRetrieverConfig(in_memory=True)
+        weaviate_cfg = WeaviateRetrieverConfig(**weaviate_dict) if weaviate_dict else WeaviateRetrieverConfig(in_memory=True)
     else:
         chunker_cfg = FixedSizeChunkerConfig()
         embedder_cfg = SentenceTransformersEmbedderConfig()

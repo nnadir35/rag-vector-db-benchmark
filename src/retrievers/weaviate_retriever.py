@@ -112,7 +112,10 @@ class WeaviateRetriever(Retriever):
             ],
             vectorizer_config=wvc.config.Configure.Vectorizer.none(),
             vector_index_config=wvc.config.Configure.VectorIndex.hnsw(
-                distance_metric=distance
+                distance_metric=distance,
+                max_connections=self._config.hnsw_m,
+                ef_construction=self._config.hnsw_ef_construction,
+                ef=self._config.hnsw_ef_search,
             ),
         )
 

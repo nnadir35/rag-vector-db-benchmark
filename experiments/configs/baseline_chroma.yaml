@@ -20,6 +20,9 @@ retriever:
   type: "chroma"
   collection_name: "chroma_squad_bench"
   distance_metric: "cosine"
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64
 
 generator:
   model_name: "ollama/llama3:8b"

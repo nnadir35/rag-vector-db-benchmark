@@ -24,28 +24,44 @@ pipeline:
 
 chroma_retriever:
   collection_name: "bench_chroma_squad"
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64
 
 qdrant_retriever:
   collection_name: "bench_qdrant_squad"
-  in_memory: true
+  in_memory: false
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64
 
 faiss_retriever:
   collection_name: "bench_faiss_squad"
   distance_metric: "cosine"
+  index_type: "hnsw"
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64
 
 milvus_retriever:
   collection_name: "bench_milvus_squad"
   distance_metric: "cosine"
   in_memory: false
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64
 
 elasticsearch_retriever:
-  # Requires docker-compose up elasticsearch for in_memory: false
   index_name: "bench_elasticsearch_squad"
   distance_metric: "cosine"
   in_memory: false
   host: "http://localhost:9200"
+  num_candidates: 64
 
 weaviate_retriever:
   collection_name: "bench_weaviate_squad"
   distance_metric: "cosine"
   in_memory: false
+  hnsw_m: 16
+  hnsw_ef_construction: 200
+  hnsw_ef_search: 64

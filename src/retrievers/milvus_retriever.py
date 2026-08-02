@@ -142,8 +142,12 @@ class MilvusRetriever(Retriever):
             index_params = client.prepare_index_params()
             index_params.add_index(
                 field_name="vector",
-                index_type="FLAT",
+                index_type="HNSW",
                 metric_type=self._metric_type(),
+                params={
+                    "M": self._config.hnsw_m,
+                    "efConstruction": self._config.hnsw_ef_construction,
+                },
             )
 
             client.create_collection(
@@ -279,7 +283,7 @@ class MilvusRetriever(Retriever):
                 collection_name=self._config.collection_name,
                 data=[list(query_embedding.vector)],
                 anns_field="vector",
-                search_params={"metric_type": self._metric_type(), "params": {}},
+                search_params={"metric_type": self._metric_type(), "params": {"ef": self._config.hnsw_ef_search}},
                 limit=top_k,
                 output_fields=[
                     "chunk_id",

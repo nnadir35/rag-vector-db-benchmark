@@ -260,7 +260,7 @@ class ElasticSearchRetriever(Retriever):
                 "field": "embedding",
                 "query_vector": list(query_embedding.vector),
                 "k": top_k,
-                "num_candidates": 100
+                "num_candidates": self._config.num_candidates
             },
             "_source": ["id", "content", "document_id", "chunk_index", "start_char", "end_char", "custom"],
         }

@@ -124,7 +124,12 @@ class ChromaRetriever(Retriever):
             try:
                 self._collection = self._client.get_or_create_collection(
                     name=self._config.collection_name,
-                    metadata={"hnsw:space": self._config.distance_metric}
+                    metadata={
+                        "hnsw:space": self._config.distance_metric,
+                        "hnsw:M": self._config.hnsw_m,
+                        "hnsw:construction_ef": self._config.hnsw_ef_construction,
+                        "hnsw:search_ef": self._config.hnsw_ef_search,
+                    }
                 )
             except Exception as exc:
                 raise RuntimeError(

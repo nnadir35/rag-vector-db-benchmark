@@ -136,11 +136,17 @@ class QdrantRetriever(Retriever):
                 exists = False
 
         if not exists:
+            from qdrant_client.models import HnswConfigDiff
+
             client.create_collection(
                 collection_name=name,
                 vectors_config=VectorParams(
                     size=vector_size,
                     distance=self._distance_to_qdrant(),
+                ),
+                hnsw_config=HnswConfigDiff(
+                    m=self._config.hnsw_m,
+                    ef_construct=self._config.hnsw_ef_construction,
                 ),
             )
 
@@ -287,12 +293,15 @@ class QdrantRetriever(Retriever):
                     "Cannot retrieve from Qdrant: collection is empty. Call add_chunks first."
                 )
 
+            from qdrant_client.models import SearchParams
+
             client = self._get_client()
 
             hits = client.query_points(
                 collection_name=self._config.collection_name,
                 query=list(query_embedding.vector),
                 limit=top_k,
+                search_params=SearchParams(hnsw_ef=self._config.hnsw_ef_search),
                 with_payload=True,
             ).points
 

@@ -89,10 +89,23 @@ class FAISSRetriever(Retriever):
 
         if self._index is None:
             metric = self._config.distance_metric
-            if metric == "l2":
-                self._index = faiss.IndexFlatL2(vector_size)
-            else:  # cosine veya ip
-                self._index = faiss.IndexFlatIP(vector_size)
+            if self._config.index_type == "hnsw":
+                # HNSW — approximate
+                m = self._config.hnsw_m
+                ef_construction = self._config.hnsw_ef_construction
+                if metric == "l2":
+                    base_index = faiss.IndexHNSWFlat(vector_size, m, faiss.METRIC_L2)
+                else:  # cosine / ip (vektörler normalize edilecek, IP yeterli)
+                    base_index = faiss.IndexHNSWFlat(vector_size, m, faiss.METRIC_INNER_PRODUCT)
+                base_index.hnsw.efConstruction = ef_construction
+                base_index.hnsw.efSearch = self._config.hnsw_ef_search
+                self._index = base_index
+            else:
+                # FLAT — exact (referans)
+                if metric == "l2":
+                    self._index = faiss.IndexFlatL2(vector_size)
+                else:
+                    self._index = faiss.IndexFlatIP(vector_size)
 
         return self._index
 

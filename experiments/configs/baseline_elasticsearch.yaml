@@ -22,6 +22,7 @@ retriever:
   distance_metric: "cosine"
   in_memory: false
   host: "http://localhost:9200"
+  num_candidates: 64
 
 generator:
   model_name: "ollama/llama3:8b"
