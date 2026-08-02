@@ -316,3 +316,20 @@ class ChromaRetriever(Retriever):
                 # Property _chroma_collection will recreate it on next call
         except Exception as e:
             raise RuntimeError(f"Failed to clear ChromaDB: {e}") from e
+
+    def describe_index(self) -> dict[str, Any]:
+        """Inspect and return runtime index configuration for ChromaDB."""
+        host = os.getenv("CHROMA_HOST", "").strip()
+        in_memory = (self._config.persist_directory is None) and (not host)
+        info: dict[str, Any] = {
+            "in_memory": in_memory,
+            "collection_name": self._config.collection_name,
+            "distance_metric": self._config.distance_metric,
+        }
+        if self._collection is not None:
+            info["metadata"] = getattr(self._collection, "metadata", {})
+            info["hnsw_m"] = info["metadata"].get("hnsw:M")
+            info["hnsw_ef_construction"] = info["metadata"].get("hnsw:construction_ef")
+            info["hnsw_ef_search"] = info["metadata"].get("hnsw:search_ef")
+        return info
+

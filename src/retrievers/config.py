@@ -226,6 +226,8 @@ class ElasticSearchRetrieverConfig:
             ELASTICSEARCH_HOST environment variable if set.
         dims: Dimension of the embedding vectors (default 384 for MiniLM).
         num_candidates: Number of candidates for KNN search.
+        hnsw_m: HNSW M parameter (index_options.m).
+        hnsw_ef_construction: HNSW ef_construction parameter (index_options.ef_construction).
     """
 
     index_name: str = field(default="es_benchmark")
@@ -234,6 +236,8 @@ class ElasticSearchRetrieverConfig:
     host: str = field(default="http://localhost:9200")
     dims: int = field(default=384)
     num_candidates: int = field(default=100)
+    hnsw_m: int = field(default=16)
+    hnsw_ef_construction: int = field(default=200)
 
     def __post_init__(self) -> None:
         valid = {"cosine", "dot_product", "l2_norm"}

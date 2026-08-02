@@ -156,6 +156,11 @@ class ElasticSearchRetriever(Retriever):
                         "dims": self._config.dims,
                         "index": True,
                         "similarity": self._config.distance_metric,
+                        "index_options": {
+                            "type": "hnsw",
+                            "m": self._config.hnsw_m,
+                            "ef_construction": self._config.hnsw_ef_construction,
+                        },
                     },
                     "id": {"type": "keyword"},
                     "content": {"type": "text"},
@@ -296,4 +301,29 @@ class ElasticSearchRetriever(Retriever):
             client.indices.delete(index=self._config.index_name)
         # Reset internal client – a fresh index will be created on the next call.
         self._client = None
+
+    def describe_index(self) -> dict[str, Any]:
+        """Inspect and return runtime index configuration for ElasticSearch."""
+        info: dict[str, Any] = {
+            "in_memory": self._config.in_memory,
+            "index_name": self._config.index_name,
+            "distance_metric": self._config.distance_metric,
+        }
+        if not self._config.in_memory:
+            try:
+                client = self._get_client()
+                if client.indices.exists(index=self._config.index_name):
+                    mapping = client.indices.get_mapping(index=self._config.index_name)
+                    info["mapping"] = mapping.body if hasattr(mapping, "body") else dict(mapping)
+                    props = info["mapping"].get(self._config.index_name, {}).get("mappings", {}).get("properties", {}).get("vector", {})
+                    idx_opts = props.get("index_options", {})
+                    info["index_options"] = idx_opts
+                    if "m" in idx_opts:
+                        info["hnsw_m"] = idx_opts["m"]
+                    if "ef_construction" in idx_opts:
+                        info["hnsw_ef_construction"] = idx_opts["ef_construction"]
+            except Exception:
+                pass
+        return info
+
 

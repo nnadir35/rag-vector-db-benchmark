@@ -366,3 +366,27 @@ class MilvusRetriever(Retriever):
                         pass
         except Exception as e:
             raise RuntimeError(f"Failed to clear Milvus: {e}") from e
+
+    def describe_index(self) -> dict[str, Any]:
+        """Inspect and return runtime index configuration for Milvus."""
+        info: dict[str, Any] = {
+            "in_memory": self._config.in_memory,
+            "collection_name": self._config.collection_name,
+            "distance_metric": self._config.distance_metric,
+        }
+        if self._client is not None and self._collection_ready:
+            try:
+                client = self._get_client()
+                index_details = client.describe_index(collection_name=self._config.collection_name, index_name="vector_index")
+                info["index_details"] = index_details
+                info["index_type"] = index_details.get("index_type")
+                params = index_details.get("params", {})
+                info["params"] = params
+                if "M" in params:
+                    info["hnsw_m"] = int(params["M"])
+                if "efConstruction" in params:
+                    info["hnsw_ef_construction"] = int(params["efConstruction"])
+            except Exception:
+                pass
+        return info
+

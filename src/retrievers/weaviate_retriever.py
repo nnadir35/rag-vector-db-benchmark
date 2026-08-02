@@ -234,3 +234,27 @@ class WeaviateRetriever(Retriever):
         if client.collections.exists(self._config.collection_name):
             client.collections.delete(self._config.collection_name)
         self._collection = None
+
+    def describe_index(self) -> dict[str, Any]:
+        """Inspect and return runtime index configuration for Weaviate."""
+        info: dict[str, Any] = {
+            "in_memory": self._config.in_memory,
+            "collection_name": self._config.collection_name,
+            "distance_metric": self._config.distance_metric,
+        }
+        if not self._config.in_memory:
+            try:
+                client = self._get_client()
+                if client.collections.exists(self._config.collection_name):
+                    col = client.collections.get(self._config.collection_name)
+                    col_cfg = col.config.get()
+                    info["vector_index_config"] = str(getattr(col_cfg, "vector_index_config", None))
+                    vec_cfg = getattr(col_cfg, "vector_index_config", None)
+                    if vec_cfg is not None:
+                        info["hnsw_m"] = getattr(vec_cfg, "max_connections", None)
+                        info["hnsw_ef_construction"] = getattr(vec_cfg, "ef_construction", None)
+                        info["hnsw_ef_search"] = getattr(vec_cfg, "ef", None)
+            except Exception:
+                pass
+        return info
+

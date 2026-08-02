@@ -353,3 +353,21 @@ class FAISSRetriever(Retriever):
                     os.remove(meta_path)
         except Exception as e:
             raise RuntimeError(f"Failed to clear FAISS index: {e}") from e
+
+    def describe_index(self) -> dict[str, Any]:
+        """Inspect and return runtime index configuration for FAISS."""
+        info: dict[str, Any] = {
+            "in_memory": self._config.persist_path is None,
+            "index_type": self._config.index_type,
+            "collection_name": self._config.collection_name,
+            "distance_metric": self._config.distance_metric,
+        }
+        if self._index is not None:
+            info["backend_type"] = type(self._index).__name__
+            hnsw_obj = getattr(self._index, "hnsw", None)
+            if hnsw_obj is not None:
+                info["hnsw_ef_construction"] = getattr(hnsw_obj, "efConstruction", None)
+                info["hnsw_ef_search"] = getattr(hnsw_obj, "efSearch", None)
+                info["hnsw_m"] = getattr(self._config, "hnsw_m", None)
+        return info
+

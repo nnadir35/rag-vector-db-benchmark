@@ -30,6 +30,7 @@ except ImportError as exc:  # pragma: no cover - runtime guard
         "psutil is required for benchmark_db.py. Install with: pip install psutil"
     ) from exc
 
+import numpy as np
 from tqdm import tqdm
 
 from src.chunkers.config import FixedSizeChunkerConfig
@@ -194,23 +195,131 @@ def _mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def _percentile(values: list[float], p: float) -> float:
+    return float(np.percentile(values, p)) if values else float("nan")
+
+
+WARMUP_COUNT = 10
+
+
+def _evaluate_with_repeats(
+    *,
+    name: str,
+    retrieve_fn: Callable[[Query, int], Any],
+    bench_queries: list[Query],
+    top_k: int,
+    ground_truth: dict[str, set[str]],
+    evaluator: RetrievalEvaluator,
+    num_repeats: int,
+    show_progress: bool,
+    dump_per_query: bool = False,
+) -> dict[str, Any]:
+    """Run the retrieval pass for one DB ``num_repeats`` times."""
+    per_repeat_avg_ms: list[float] = []
+    per_repeat_p50_ms: list[float] = []
+    per_repeat_p95_ms: list[float] = []
+    per_repeat_metrics: list[dict[str, float]] = []
+    per_query_details: list[dict[str, Any]] = []
+
+    def _do_all_repeats() -> None:
+        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        for repeat_idx in range(num_repeats):
+            for q in warmup_queries:
+                retrieve_fn(q, top_k)
+
+            latencies_ms: list[float] = []
+            rows: list[dict[str, float]] = []
+            for q in tqdm(
+                bench_queries,
+                desc=f"{name} retrieval (repeat {repeat_idx + 1}/{num_repeats})",
+                unit="q",
+                leave=False,
+                disable=not show_progress,
+            ):
+                t_r0 = time.perf_counter()
+                result = retrieve_fn(q, top_k)
+                lat_ms = (time.perf_counter() - t_r0) * 1000.0
+                latencies_ms.append(lat_ms)
+                gt = set(ground_truth.get(q.id, set()))
+                rows.append(evaluator.evaluate(result, gt))
+
+                if dump_per_query and repeat_idx == 0:
+                    retrieved_chunks_info = [
+                        {
+                            "chunk_id": rc.chunk.id,
+                            "doc_id": rc.chunk.id.split('_chunk_')[0] if '_chunk_' in rc.chunk.id else rc.chunk.id,
+                            "score": float(rc.score),
+                            "rank": rc.rank,
+                        }
+                        for rc in result.chunks
+                    ]
+                    per_query_details.append({
+                        "query_id": q.id,
+                        "latency_ms": lat_ms,
+                        "retrieved": retrieved_chunks_info,
+                    })
+
+            per_repeat_avg_ms.append(_mean(latencies_ms))
+            per_repeat_p50_ms.append(_percentile(latencies_ms, 50))
+            per_repeat_p95_ms.append(_percentile(latencies_ms, 95))
+            per_repeat_metrics.append(_mean_metrics(rows))
+
+    _, resource_stats = run_with_resource_stats(_do_all_repeats)
+
+    metric_keys = per_repeat_metrics[0].keys() if per_repeat_metrics else []
+    metrics_mean = {k: float(np.mean([m[k] for m in per_repeat_metrics])) for k in metric_keys}
+    metrics_std = {k: float(np.std([m[k] for m in per_repeat_metrics])) for k in metric_keys}
+
+    res = {
+        "resource_stats": resource_stats,
+        "avg_ms_mean": float(np.mean(per_repeat_avg_ms)) if per_repeat_avg_ms else float("nan"),
+        "avg_ms_std": float(np.std(per_repeat_avg_ms)) if per_repeat_avg_ms else float("nan"),
+        "p50_ms_mean": float(np.mean(per_repeat_p50_ms)) if per_repeat_p50_ms else float("nan"),
+        "p50_ms_std": float(np.std(per_repeat_p50_ms)) if per_repeat_p50_ms else float("nan"),
+        "p95_ms_mean": float(np.mean(per_repeat_p95_ms)) if per_repeat_p95_ms else float("nan"),
+        "p95_ms_std": float(np.std(per_repeat_p95_ms)) if per_repeat_p95_ms else float("nan"),
+        "metrics_mean": metrics_mean,
+        "metrics_std": metrics_std,
+        "num_repeats": num_repeats,
+    }
+    if dump_per_query:
+        res["per_query_details"] = per_query_details
+    return res
+
+
 def _select_queries_for_documents(
     queries: list[Query],
     ground_truth: dict[str, set[str]],
     doc_ids: set[str],
     num_queries: int,
+    query_seed: int = 42,
 ) -> list[Query]:
-    """Pick queries whose ground-truth context document is in ``doc_ids``."""
-    selected: list[Query] = []
+    """Pick queries whose ground-truth context document is in ``doc_ids`` using a seeded random selection."""
+    candidate_queries: list[Query] = []
     for q in queries:
-        if len(selected) >= num_queries:
-            break
         gt = ground_truth.get(q.id, set())
         if not gt:
             continue
         if gt.issubset(doc_ids):
-            selected.append(q)
-    return selected
+            candidate_queries.append(q)
+
+    if len(candidate_queries) <= num_queries:
+        return candidate_queries
+
+    import random
+    rng = random.Random(query_seed)
+    selected_indices = rng.sample(range(len(candidate_queries)), num_queries)
+    return [candidate_queries[i] for i in sorted(selected_indices)]
+
+
+
+
+
+
+
+
+
+
 
 
 def _mean_metrics(rows: list[dict[str, float]]) -> dict[str, float]:
@@ -220,31 +329,58 @@ def _mean_metrics(rows: list[dict[str, float]]) -> dict[str, float]:
     return {k: sum(r[k] for r in rows) / len(rows) for k in keys}
 
 
-def _winner_speed(chroma_ms: float, qdrant_ms: float) -> str:
-    if chroma_ms < qdrant_ms:
-        return "ChromaDB"
-    if qdrant_ms < chroma_ms:
-        return "Qdrant"
-    return "tie"
-
-
-def _winner_recall(chroma_r: float, qdrant_r: float) -> str:
-    if chroma_r > qdrant_r:
-        return "ChromaDB"
-    if qdrant_r > chroma_r:
-        return "Qdrant"
-    return "tie"
-
-
 def _winner_speed_multi(db_ms: dict[str, float]) -> str:
-    """En düşük latency'e sahip DB adını döner."""
-    return min(db_ms, key=lambda k: db_ms[k])
+    """En düşük latency'e sahip DB adını (veya eşitlik durumunda 'TIE') döner."""
+    if not db_ms:
+        return "N/A"
+    min_val = min(db_ms.values())
+    winners = [k for k, v in db_ms.items() if abs(v - min_val) < 1e-9]
+    if len(winners) > 1:
+        if len(winners) == len(db_ms):
+            return "TIE (All Equal)"
+        return f"TIE ({', '.join(winners)})"
+    return winners[0]
 
 
 def _winner_recall_multi(db_recall: dict[str, float]) -> str:
-    """En yüksek recall'a sahip DB adını döner."""
-    return max(db_recall, key=lambda k: db_recall[k])
+    """En yüksek recall'a sahip DB adını (veya eşitlik durumunda 'TIE') döner."""
+    if not db_recall:
+        return "N/A"
+    max_val = max(db_recall.values())
+    winners = [k for k, v in db_recall.items() if abs(v - max_val) < 1e-9]
+    if len(winners) > 1:
+        if len(winners) == len(db_recall):
+            return "TIE (All Equal)"
+        return f"TIE ({', '.join(winners)})"
+    return winners[0]
 
+
+def validate_effective_config(effective_cfg: dict[str, dict[str, Any]]) -> None:
+    """Check effective DB configurations and output warnings to stderr if unexpected modes are used."""
+    expected_defaults = {
+        "hnsw_m": 16,
+        "hnsw_ef_construction": 200,
+        "hnsw_ef_search": 64,
+    }
+    warnings: list[str] = []
+    for db_name, cfg in effective_cfg.items():
+        if cfg.get("in_memory") is True:
+            warnings.append(f"[{db_name.upper()}] in_memory=True (MOCK / embedded in-process mode running!)")
+        if db_name == "faiss" and cfg.get("index_type") != "hnsw":
+            warnings.append(f"[FAISS] index_type='{cfg.get('index_type')}' (expected 'hnsw')")
+        for key in ["hnsw_m", "hnsw_ef_construction", "hnsw_ef_search"]:
+            if key in expected_defaults:
+                actual = cfg.get(key)
+                exp_val = expected_defaults[key]
+                if actual is not None and actual != exp_val:
+                    warnings.append(f"[{db_name.upper()}] {key}={actual} (expected {exp_val})")
+
+    if warnings:
+        sys.stderr.write("\n" + "!" * 80 + "\n")
+        sys.stderr.write("⚠️  KONFİGÜRASYON UYUMSUZLUĞU / MOCK UYARISI:\n")
+        for w in warnings:
+            sys.stderr.write(f"  - {w}\n")
+        sys.stderr.write("!" * 80 + "\n\n")
 
 
 def run_benchmark(
@@ -264,8 +400,19 @@ def run_benchmark(
     squad_version: str,
     show_progress: bool,
     fixed_query_ids: set[str] | None = None,
+    num_repeats: int = 3,
+    query_seed: int = 42,
+    dump_per_query: bool = False,
 ) -> dict[str, Any]:
     """Execute indexing and retrieval benchmarks; return a JSON-serializable report."""
+
+
+
+
+
+
+
+
     if top_k not in k_values:
         k_values = sorted({*k_values, top_k})
 
@@ -293,7 +440,7 @@ def run_benchmark(
             )
     else:
         bench_queries = _select_queries_for_documents(
-            all_queries, ground_truth, doc_ids, num_queries
+            all_queries, ground_truth, doc_ids, num_queries, query_seed=query_seed
         )
         if len(bench_queries) < num_queries:
             logging.warning(
@@ -304,7 +451,6 @@ def run_benchmark(
                 num_queries,
             )
 
-    logging.info("Chunking %s documents...", len(documents))
     chunker = FixedSizeChunker(chunker_cfg)
     chunks: list[Chunk] = []
     doc_iter = tqdm(
@@ -334,33 +480,20 @@ def run_benchmark(
     _, chroma_index_stats = run_with_resource_stats(_chroma_index)
     chroma_add_seconds = time.perf_counter() - t_idx0
 
-    WARMUP_COUNT = 10
-
     # --- Retrieval + accuracy (Chroma) ---
-    chroma_latencies_ms: list[float] = []
-    chroma_rows: list[dict[str, float]] = []
-
-    def _chroma_retrieval_pass() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
-        for q in warmup_queries:
-            chroma.retrieve(q, top_k=top_k)
-
-        for q in tqdm(
-            bench_queries,
-            desc="Chroma retrieval",
-            unit="q",
-            leave=False,
-            disable=not show_progress,
-        ):
-            t_r0 = time.perf_counter()
-            result = chroma.retrieve(q, top_k=top_k)
-            chroma_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
-            gt = set(ground_truth.get(q.id, set()))
-            chroma_rows.append(evaluator.evaluate(result, gt))
-
-    _, chroma_retrieval_stats = run_with_resource_stats(_chroma_retrieval_pass)
-
-    chroma_mean = _mean_metrics(chroma_rows)
+    chroma_eval = _evaluate_with_repeats(
+        name="Chroma",
+        retrieve_fn=lambda q, k: chroma.retrieve(q, top_k=k),
+        bench_queries=bench_queries,
+        top_k=top_k,
+        ground_truth=ground_truth,
+        evaluator=evaluator,
+        num_repeats=num_repeats,
+        show_progress=show_progress,
+    )
+    chroma_retrieval_stats = chroma_eval["resource_stats"]
+    chroma_mean = chroma_eval["metrics_mean"]
+    chroma_std = chroma_eval["metrics_std"]
     chroma_recall = chroma_mean.get(recall_key, float("nan"))
 
     # --- Qdrant: persist + resource stats ---
@@ -374,30 +507,19 @@ def run_benchmark(
     _, qdrant_index_stats = run_with_resource_stats(_qdrant_index)
     qdrant_add_seconds = time.perf_counter() - t_qidx0
 
-    qdrant_latencies_ms: list[float] = []
-    qdrant_rows: list[dict[str, float]] = []
-
-    def _qdrant_retrieval_pass() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
-        for q in warmup_queries:
-            qdrant.retrieve(q, top_k=top_k)
-
-        for q in tqdm(
-            bench_queries,
-            desc="Qdrant retrieval",
-            unit="q",
-            leave=False,
-            disable=not show_progress,
-        ):
-            t_r0 = time.perf_counter()
-            result = qdrant.retrieve(q, top_k=top_k)
-            qdrant_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
-            gt = set(ground_truth.get(q.id, set()))
-            qdrant_rows.append(evaluator.evaluate(result, gt))
-
-    _, qdrant_retrieval_stats = run_with_resource_stats(_qdrant_retrieval_pass)
-
-    qdrant_mean = _mean_metrics(qdrant_rows)
+    qdrant_eval = _evaluate_with_repeats(
+        name="Qdrant",
+        retrieve_fn=lambda q, k: qdrant.retrieve(q, top_k=k),
+        bench_queries=bench_queries,
+        top_k=top_k,
+        ground_truth=ground_truth,
+        evaluator=evaluator,
+        num_repeats=num_repeats,
+        show_progress=show_progress,
+    )
+    qdrant_retrieval_stats = qdrant_eval["resource_stats"]
+    qdrant_mean = qdrant_eval["metrics_mean"]
+    qdrant_std = qdrant_eval["metrics_std"]
     qdrant_recall = qdrant_mean.get(recall_key, float("nan"))
 
     # --- FAISS: persist + resource stats ---
@@ -412,30 +534,19 @@ def run_benchmark(
     faiss_add_seconds = time.perf_counter() - t_fidx0
 
     # --- Retrieval + accuracy (FAISS) ---
-    faiss_latencies_ms: list[float] = []
-    faiss_rows: list[dict[str, float]] = []
-
-    def _faiss_retrieval_pass() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
-        for q in warmup_queries:
-            faiss.retrieve(q, top_k=top_k)
-
-        for q in tqdm(
-            bench_queries,
-            desc="FAISS retrieval",
-            unit="q",
-            leave=False,
-            disable=not show_progress,
-        ):
-            t_r0 = time.perf_counter()
-            result = faiss.retrieve(q, top_k=top_k)
-            faiss_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
-            gt = set(ground_truth.get(q.id, set()))
-            faiss_rows.append(evaluator.evaluate(result, gt))
-
-    _, faiss_retrieval_stats = run_with_resource_stats(_faiss_retrieval_pass)
-
-    faiss_mean = _mean_metrics(faiss_rows)
+    faiss_eval = _evaluate_with_repeats(
+        name="FAISS",
+        retrieve_fn=lambda q, k: faiss.retrieve(q, top_k=k),
+        bench_queries=bench_queries,
+        top_k=top_k,
+        ground_truth=ground_truth,
+        evaluator=evaluator,
+        num_repeats=num_repeats,
+        show_progress=show_progress,
+    )
+    faiss_retrieval_stats = faiss_eval["resource_stats"]
+    faiss_mean = faiss_eval["metrics_mean"]
+    faiss_std = faiss_eval["metrics_std"]
     faiss_recall = faiss_mean.get(recall_key, float("nan"))
 
     # --- Milvus: persist + resource stats ---
@@ -450,30 +561,19 @@ def run_benchmark(
     milvus_add_seconds = time.perf_counter() - t_midx0
 
     # --- Retrieval + accuracy (Milvus) ---
-    milvus_latencies_ms: list[float] = []
-    milvus_rows: list[dict[str, float]] = []
-
-    def _milvus_retrieval_pass() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
-        for q in warmup_queries:
-            milvus.retrieve(q, top_k=top_k)
-
-        for q in tqdm(
-            bench_queries,
-            desc="Milvus retrieval",
-            unit="q",
-            leave=False,
-            disable=not show_progress,
-        ):
-            t_r0 = time.perf_counter()
-            result = milvus.retrieve(q, top_k=top_k)
-            milvus_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
-            gt = set(ground_truth.get(q.id, set()))
-            milvus_rows.append(evaluator.evaluate(result, gt))
-
-    _, milvus_retrieval_stats = run_with_resource_stats(_milvus_retrieval_pass)
-
-    milvus_mean = _mean_metrics(milvus_rows)
+    milvus_eval = _evaluate_with_repeats(
+        name="Milvus",
+        retrieve_fn=lambda q, k: milvus.retrieve(q, top_k=k),
+        bench_queries=bench_queries,
+        top_k=top_k,
+        ground_truth=ground_truth,
+        evaluator=evaluator,
+        num_repeats=num_repeats,
+        show_progress=show_progress,
+    )
+    milvus_retrieval_stats = milvus_eval["resource_stats"]
+    milvus_mean = milvus_eval["metrics_mean"]
+    milvus_std = milvus_eval["metrics_std"]
     milvus_recall = milvus_mean.get(recall_key, float("nan"))
 
     # --- ElasticSearch: persist + resource stats ---
@@ -488,30 +588,19 @@ def run_benchmark(
     elasticsearch_add_seconds = time.perf_counter() - t_esidx0
 
     # --- Retrieval + accuracy (ElasticSearch) ---
-    elasticsearch_latencies_ms: list[float] = []
-    elasticsearch_rows: list[dict[str, float]] = []
-
-    def _elasticsearch_retrieval_pass() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
-        for q in warmup_queries:
-            elasticsearch.retrieve(q, top_k=top_k)
-
-        for q in tqdm(
-            bench_queries,
-            desc="ElasticSearch retrieval",
-            unit="q",
-            leave=False,
-            disable=not show_progress,
-        ):
-            t_r0 = time.perf_counter()
-            result = elasticsearch.retrieve(q, top_k=top_k)
-            elasticsearch_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
-            gt = set(ground_truth.get(q.id, set()))
-            elasticsearch_rows.append(evaluator.evaluate(result, gt))
-
-    _, elasticsearch_retrieval_stats = run_with_resource_stats(_elasticsearch_retrieval_pass)
-
-    elasticsearch_mean = _mean_metrics(elasticsearch_rows)
+    elasticsearch_eval = _evaluate_with_repeats(
+        name="ElasticSearch",
+        retrieve_fn=lambda q, k: elasticsearch.retrieve(q, top_k=k),
+        bench_queries=bench_queries,
+        top_k=top_k,
+        ground_truth=ground_truth,
+        evaluator=evaluator,
+        num_repeats=num_repeats,
+        show_progress=show_progress,
+    )
+    elasticsearch_retrieval_stats = elasticsearch_eval["resource_stats"]
+    elasticsearch_mean = elasticsearch_eval["metrics_mean"]
+    elasticsearch_std = elasticsearch_eval["metrics_std"]
     elasticsearch_recall = elasticsearch_mean.get(recall_key, float("nan"))
 
     # --- Weaviate: persist + resource stats ---
@@ -526,60 +615,62 @@ def run_benchmark(
     weaviate_add_seconds = time.perf_counter() - t_widx0
 
     # --- Retrieval + accuracy (Weaviate) ---
-    weaviate_latencies_ms: list[float] = []
-    weaviate_rows: list[dict[str, float]] = []
-
-    def _weaviate_retrieval_pass() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
-        for q in warmup_queries:
-            weaviate.retrieve(q, top_k=top_k)
-
-        for q in tqdm(
-            bench_queries,
-            desc="Weaviate retrieval",
-            unit="q",
-            leave=False,
-            disable=not show_progress,
-        ):
-            t_r0 = time.perf_counter()
-            result = weaviate.retrieve(q, top_k=top_k)
-            weaviate_latencies_ms.append((time.perf_counter() - t_r0) * 1000.0)
-            gt = set(ground_truth.get(q.id, set()))
-            weaviate_rows.append(evaluator.evaluate(result, gt))
-
-    _, weaviate_retrieval_stats = run_with_resource_stats(_weaviate_retrieval_pass)
-
-    weaviate_mean = _mean_metrics(weaviate_rows)
+    weaviate_eval = _evaluate_with_repeats(
+        name="Weaviate",
+        retrieve_fn=lambda q, k: weaviate.retrieve(q, top_k=k),
+        bench_queries=bench_queries,
+        top_k=top_k,
+        ground_truth=ground_truth,
+        evaluator=evaluator,
+        num_repeats=num_repeats,
+        show_progress=show_progress,
+    )
+    weaviate_retrieval_stats = weaviate_eval["resource_stats"]
+    weaviate_mean = weaviate_eval["metrics_mean"]
+    weaviate_std = weaviate_eval["metrics_std"]
     weaviate_recall = weaviate_mean.get(recall_key, float("nan"))
 
-    import numpy as np
+    avg_chroma_ms = chroma_eval["avg_ms_mean"]
+    avg_chroma_ms_std = chroma_eval["avg_ms_std"]
+    p50_chroma_ms = chroma_eval["p50_ms_mean"]
+    p50_chroma_ms_std = chroma_eval["p50_ms_std"]
+    p95_chroma_ms = chroma_eval["p95_ms_mean"]
+    p95_chroma_ms_std = chroma_eval["p95_ms_std"]
 
-    def _percentile(values: list[float], p: float) -> float:
-        return float(np.percentile(values, p)) if values else float("nan")
+    avg_qdrant_ms = qdrant_eval["avg_ms_mean"]
+    avg_qdrant_ms_std = qdrant_eval["avg_ms_std"]
+    p50_qdrant_ms = qdrant_eval["p50_ms_mean"]
+    p50_qdrant_ms_std = qdrant_eval["p50_ms_std"]
+    p95_qdrant_ms = qdrant_eval["p95_ms_mean"]
+    p95_qdrant_ms_std = qdrant_eval["p95_ms_std"]
 
-    avg_chroma_ms = _mean(chroma_latencies_ms)
-    p50_chroma_ms = _percentile(chroma_latencies_ms, 50)
-    p95_chroma_ms = _percentile(chroma_latencies_ms, 95)
+    avg_faiss_ms = faiss_eval["avg_ms_mean"]
+    avg_faiss_ms_std = faiss_eval["avg_ms_std"]
+    p50_faiss_ms = faiss_eval["p50_ms_mean"]
+    p50_faiss_ms_std = faiss_eval["p50_ms_std"]
+    p95_faiss_ms = faiss_eval["p95_ms_mean"]
+    p95_faiss_ms_std = faiss_eval["p95_ms_std"]
 
-    avg_qdrant_ms = _mean(qdrant_latencies_ms)
-    p50_qdrant_ms = _percentile(qdrant_latencies_ms, 50)
-    p95_qdrant_ms = _percentile(qdrant_latencies_ms, 95)
+    avg_milvus_ms = milvus_eval["avg_ms_mean"]
+    avg_milvus_ms_std = milvus_eval["avg_ms_std"]
+    p50_milvus_ms = milvus_eval["p50_ms_mean"]
+    p50_milvus_ms_std = milvus_eval["p50_ms_std"]
+    p95_milvus_ms = milvus_eval["p95_ms_mean"]
+    p95_milvus_ms_std = milvus_eval["p95_ms_std"]
 
-    avg_faiss_ms = _mean(faiss_latencies_ms)
-    p50_faiss_ms = _percentile(faiss_latencies_ms, 50)
-    p95_faiss_ms = _percentile(faiss_latencies_ms, 95)
+    avg_elasticsearch_ms = elasticsearch_eval["avg_ms_mean"]
+    avg_elasticsearch_ms_std = elasticsearch_eval["avg_ms_std"]
+    p50_elasticsearch_ms = elasticsearch_eval["p50_ms_mean"]
+    p50_elasticsearch_ms_std = elasticsearch_eval["p50_ms_std"]
+    p95_elasticsearch_ms = elasticsearch_eval["p95_ms_mean"]
+    p95_elasticsearch_ms_std = elasticsearch_eval["p95_ms_std"]
 
-    avg_milvus_ms = _mean(milvus_latencies_ms)
-    p50_milvus_ms = _percentile(milvus_latencies_ms, 50)
-    p95_milvus_ms = _percentile(milvus_latencies_ms, 95)
-
-    avg_elasticsearch_ms = _mean(elasticsearch_latencies_ms)
-    p50_elasticsearch_ms = _percentile(elasticsearch_latencies_ms, 50)
-    p95_elasticsearch_ms = _percentile(elasticsearch_latencies_ms, 95)
-
-    avg_weaviate_ms = _mean(weaviate_latencies_ms)
-    p50_weaviate_ms = _percentile(weaviate_latencies_ms, 50)
-    p95_weaviate_ms = _percentile(weaviate_latencies_ms, 95)
+    avg_weaviate_ms = weaviate_eval["avg_ms_mean"]
+    avg_weaviate_ms_std = weaviate_eval["avg_ms_std"]
+    p50_weaviate_ms = weaviate_eval["p50_ms_mean"]
+    p50_weaviate_ms_std = weaviate_eval["p50_ms_std"]
+    p95_weaviate_ms = weaviate_eval["p95_ms_mean"]
+    p95_weaviate_ms_std = weaviate_eval["p95_ms_std"]
 
     chroma_block = {
         "indexing": {
@@ -631,6 +722,7 @@ def run_benchmark(
             "cpu_percent": round(elasticsearch_retrieval_stats.avg_cpu_percent, 2),
         },
     }
+
     weaviate_block = {
         "indexing": {
             "memory_usage_mb": round(weaviate_index_stats.peak_memory_mb, 3),
@@ -642,15 +734,30 @@ def run_benchmark(
         },
     }
 
-    return {
+    effective_config = {
+        "chroma": chroma.describe_index(),
+        "qdrant": qdrant.describe_index(),
+        "faiss": faiss.describe_index(),
+        "milvus": milvus.describe_index(),
+        "elasticsearch": elasticsearch.describe_index(),
+        "weaviate": weaviate.describe_index(),
+    }
+    validate_effective_config(effective_config)
+
+    ret_dict = {
         "squad_version": squad_version,
         "splits_used": splits_used,
         "fixed_query_set": fixed_query_ids is not None,
+        "query_seed": query_seed,
         "query_ids_used": [q.id for q in bench_queries],
+        "effective_config": effective_config,
+
         "num_documents": len(documents),
         "num_chunks": len(chunks),
         "num_queries_evaluated": len(bench_queries),
+
         "top_k": top_k,
+        "num_repeats": num_repeats,
         "embedding_seconds": embedding_seconds,
         "chroma_add_seconds": chroma_add_seconds,
         "qdrant_add_seconds": qdrant_add_seconds,
@@ -665,23 +772,41 @@ def run_benchmark(
         "elasticsearch_indexing_total_seconds": embedding_seconds + elasticsearch_add_seconds,
         "weaviate_indexing_total_seconds": embedding_seconds + weaviate_add_seconds,
         "retrieval_avg_ms_chroma": avg_chroma_ms,
+        "retrieval_avg_ms_std_chroma": avg_chroma_ms_std,
         "retrieval_p50_ms_chroma": p50_chroma_ms,
+        "retrieval_p50_ms_std_chroma": p50_chroma_ms_std,
         "retrieval_p95_ms_chroma": p95_chroma_ms,
+        "retrieval_p95_ms_std_chroma": p95_chroma_ms_std,
         "retrieval_avg_ms_qdrant": avg_qdrant_ms,
+        "retrieval_avg_ms_std_qdrant": avg_qdrant_ms_std,
         "retrieval_p50_ms_qdrant": p50_qdrant_ms,
+        "retrieval_p50_ms_std_qdrant": p50_qdrant_ms_std,
         "retrieval_p95_ms_qdrant": p95_qdrant_ms,
+        "retrieval_p95_ms_std_qdrant": p95_qdrant_ms_std,
         "retrieval_avg_ms_faiss": avg_faiss_ms,
+        "retrieval_avg_ms_std_faiss": avg_faiss_ms_std,
         "retrieval_p50_ms_faiss": p50_faiss_ms,
+        "retrieval_p50_ms_std_faiss": p50_faiss_ms_std,
         "retrieval_p95_ms_faiss": p95_faiss_ms,
+        "retrieval_p95_ms_std_faiss": p95_faiss_ms_std,
         "retrieval_avg_ms_milvus": avg_milvus_ms,
+        "retrieval_avg_ms_std_milvus": avg_milvus_ms_std,
         "retrieval_p50_ms_milvus": p50_milvus_ms,
+        "retrieval_p50_ms_std_milvus": p50_milvus_ms_std,
         "retrieval_p95_ms_milvus": p95_milvus_ms,
+        "retrieval_p95_ms_std_milvus": p95_milvus_ms_std,
         "retrieval_avg_ms_elasticsearch": avg_elasticsearch_ms,
+        "retrieval_avg_ms_std_elasticsearch": avg_elasticsearch_ms_std,
         "retrieval_p50_ms_elasticsearch": p50_elasticsearch_ms,
+        "retrieval_p50_ms_std_elasticsearch": p50_elasticsearch_ms_std,
         "retrieval_p95_ms_elasticsearch": p95_elasticsearch_ms,
+        "retrieval_p95_ms_std_elasticsearch": p95_elasticsearch_ms_std,
         "retrieval_avg_ms_weaviate": avg_weaviate_ms,
+        "retrieval_avg_ms_std_weaviate": avg_weaviate_ms_std,
         "retrieval_p50_ms_weaviate": p50_weaviate_ms,
+        "retrieval_p50_ms_std_weaviate": p50_weaviate_ms_std,
         "retrieval_p95_ms_weaviate": p95_weaviate_ms,
+        "retrieval_p95_ms_std_weaviate": p95_weaviate_ms_std,
         "recall_at_k_metric": recall_key,
         "mean_recall_chroma": chroma_recall,
         "mean_recall_qdrant": qdrant_recall,
@@ -695,6 +820,12 @@ def run_benchmark(
         "mean_metrics_milvus": milvus_mean,
         "mean_metrics_elasticsearch": elasticsearch_mean,
         "mean_metrics_weaviate": weaviate_mean,
+        "std_metrics_chroma": chroma_std,
+        "std_metrics_qdrant": qdrant_std,
+        "std_metrics_faiss": faiss_std,
+        "std_metrics_milvus": milvus_std,
+        "std_metrics_elasticsearch": elasticsearch_std,
+        "std_metrics_weaviate": weaviate_std,
         "chroma": chroma_block,
         "qdrant": qdrant_block,
         "faiss": faiss_block,
@@ -718,24 +849,96 @@ def run_benchmark(
             "Weaviate": weaviate_recall,
         }),
     }
+    return ret_dict
+
+
+
+
+
+
+
+
+def _format_val(val: float, fmt: str = ".2f") -> str:
+    if val is None or (isinstance(val, float) and (val != val or val < 0)):  # NaN check
+        return "—"
+    return f"{val:{fmt}}"
 
 
 def _print_table(report: dict[str, Any]) -> None:
-    ck = report["recall_at_k_metric"]
-    ch = report["chroma"]
-    qd = report["qdrant"]
-    fa = report["faiss"]
-    mi = report["milvus"]
-    es = report.get("elasticsearch")
-    wv = report.get("weaviate")
-    es_idx_mem = es["indexing"]["memory_usage_mb"] if es else 0.0
-    es_idx_cpu = es["indexing"]["cpu_percent"] if es else 0.0
-    es_ret_mem = es["retrieval"]["memory_usage_mb"] if es else 0.0
-    es_ret_cpu = es["retrieval"]["cpu_percent"] if es else 0.0
-    wv_idx_mem = wv["indexing"]["memory_usage_mb"] if wv else 0.0
-    wv_idx_cpu = wv["indexing"]["cpu_percent"] if wv else 0.0
-    wv_ret_mem = wv["retrieval"]["memory_usage_mb"] if wv else 0.0
-    wv_ret_cpu = wv["retrieval"]["cpu_percent"] if wv else 0.0
+    use_color = sys.stdout.isatty()
+
+    COLOR_GREEN = "\033[92m" if use_color else ""
+    COLOR_RED = "\033[91m" if use_color else ""
+    COLOR_RESET = "\033[0m" if use_color else ""
+
+    dbs = [
+        ("ChromaDB", "chroma"),
+        ("Qdrant", "qdrant"),
+        ("FAISS", "faiss"),
+        ("Milvus", "milvus"),
+        ("ElasticSearch", "elasticsearch"),
+        ("Weaviate", "weaviate"),
+    ]
+
+    ck = report.get("recall_at_k_metric", "recall@10")
+
+    def get_val(metric_type: str, key_suffix: str) -> dict[str, float]:
+        res = {}
+        for db_name, key in dbs:
+            if metric_type == "add_seconds":
+                res[db_name] = report.get(f"{key}_add_seconds", 0.0)
+            elif metric_type == "idx_mem":
+                block = report.get(key, {})
+                res[db_name] = block.get("indexing", {}).get("memory_usage_mb", 0.0) if block else 0.0
+            elif metric_type == "idx_cpu":
+                block = report.get(key, {})
+                res[db_name] = block.get("indexing", {}).get("cpu_percent", 0.0) if block else 0.0
+            elif metric_type == "idx_total":
+                res[db_name] = report.get(f"{key}_indexing_total_seconds", 0.0)
+            elif metric_type == "ret_avg":
+                res[db_name] = report.get(f"retrieval_avg_ms_{key}", 0.0)
+            elif metric_type == "ret_p50":
+                res[db_name] = report.get(f"retrieval_p50_ms_{key}", 0.0)
+            elif metric_type == "ret_p95":
+                res[db_name] = report.get(f"retrieval_p95_ms_{key}", 0.0)
+            elif metric_type == "ret_mem":
+                block = report.get(key, {})
+                res[db_name] = block.get("retrieval", {}).get("memory_usage_mb", 0.0) if block else 0.0
+            elif metric_type == "ret_cpu":
+                block = report.get(key, {})
+                res[db_name] = block.get("retrieval", {}).get("cpu_percent", 0.0) if block else 0.0
+            elif metric_type == "recall":
+                res[db_name] = report.get(f"mean_recall_{key}", float("nan"))
+            elif metric_type == "mrr":
+                mm = report.get(f"mean_metrics_{key}", {})
+                res[db_name] = mm.get("mrr", float("nan"))
+            elif metric_type == "ndcg10":
+                mm = report.get(f"mean_metrics_{key}", {})
+                res[db_name] = mm.get("ndcg@10", float("nan"))
+        return res
+
+    def format_row(title: str, val_dict: dict[str, float], fmt: str = ".2f", higher_is_better: bool = False, apply_color: bool = True) -> str:
+        valid_vals = [v for v in val_dict.values() if v is not None and isinstance(v, (int, float)) and v == v]
+        best_val = max(valid_vals) if (higher_is_better and valid_vals) else (min(valid_vals) if valid_vals else None)
+        worst_val = min(valid_vals) if (higher_is_better and valid_vals) else (max(valid_vals) if valid_vals else None)
+
+        cell_strings = []
+        for db_name, _ in dbs:
+            val = val_dict.get(db_name, float("nan"))
+            formatted = _format_val(val, fmt)
+            if apply_color and best_val is not None and worst_val is not None and best_val != worst_val:
+                if abs(val - best_val) < 1e-9:
+                    cell_str = f"{COLOR_GREEN}{formatted:>16}{COLOR_RESET}"
+                elif abs(val - worst_val) < 1e-9:
+                    cell_str = f"{COLOR_RED}{formatted:>16}{COLOR_RESET}"
+                else:
+                    cell_str = f"{formatted:>16}"
+            else:
+                cell_str = f"{formatted:>16}"
+            cell_strings.append(cell_str)
+
+        return f"{title:<50} | " + " | ".join(cell_strings)
+
     print("\n" + "=" * 165)
     print("VECTOR DB BENCHMARK (SQuAD — LLM devre dışı, sadece embed + retrieval)")
     print("=" * 165)
@@ -752,59 +955,41 @@ def _print_table(report: dict[str, Any]) -> None:
         f"{'İndeksleme: embedding (ortak, tek geçiş) [s]':<50} | "
         f"{report['embedding_seconds']:16.3f} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16} | {'—':>16}"
     )
-    print(
-        f"{'İndeksleme: DB yazma (add_chunks) [s]':<50} | "
-        f"{report['chroma_add_seconds']:16.3f} | {report['qdrant_add_seconds']:16.3f} | "
-        f"{report['faiss_add_seconds']:16.3f} | {report['milvus_add_seconds']:16.3f} | {report.get('elasticsearch_add_seconds', 0.0):16.3f} | {report.get('weaviate_add_seconds', 0.0):16.3f}"
-    )
-    print(
-        f"{'İndeksleme: peak RAM (RSS) [MB]':<50} | "
-        f"{ch['indexing']['memory_usage_mb']:16.3f} | {qd['indexing']['memory_usage_mb']:16.3f} | "
-        f"{fa['indexing']['memory_usage_mb']:16.3f} | {mi['indexing']['memory_usage_mb']:16.3f} | {es_idx_mem:16.3f} | {wv_idx_mem:16.3f}"
-    )
-    print(
-        f"{'İndeksleme: ort. CPU [%]':<50} | "
-        f"{ch['indexing']['cpu_percent']:16.2f} | {qd['indexing']['cpu_percent']:16.2f} | "
-        f"{fa['indexing']['cpu_percent']:16.2f} | {mi['indexing']['cpu_percent']:16.2f} | {es_idx_cpu:16.2f} | {wv_idx_cpu:16.2f}"
-    )
-    print(
-        f"{'İndeksleme: toplam (embedding + bu DB) [s]':<50} | "
-        f"{report['chroma_indexing_total_seconds']:16.3f} | "
-        f"{report['qdrant_indexing_total_seconds']:16.3f} | "
-        f"{report['faiss_indexing_total_seconds']:16.3f} | "
-        f"{report['milvus_indexing_total_seconds']:16.3f} | {report.get('elasticsearch_indexing_total_seconds', 0.0):16.3f} | {report.get('weaviate_indexing_total_seconds', 0.0):16.3f}"
-    )
-    print(
-        f"{'Ortalama retrieval [ms] (sorgu embed + arama)':<50} | "
-        f"{report['retrieval_avg_ms_chroma']:16.2f} | {report['retrieval_avg_ms_qdrant']:16.2f} | "
-        f"{report['retrieval_avg_ms_faiss']:16.2f} | {report['retrieval_avg_ms_milvus']:16.2f} | {report.get('retrieval_avg_ms_elasticsearch', 0.0):16.2f} | {report.get('retrieval_avg_ms_weaviate', 0.0):16.2f}"
-    )
-    print(
-        f"{'Retrieval: peak RAM (RSS) [MB]':<50} | "
-        f"{ch['retrieval']['memory_usage_mb']:16.3f} | {qd['retrieval']['memory_usage_mb']:16.3f} | "
-        f"{fa['retrieval']['memory_usage_mb']:16.3f} | {mi['retrieval']['memory_usage_mb']:16.3f} | {es_ret_mem:16.3f} | {wv_ret_mem:16.3f}"
-    )
-    print(
-        f"{'Retrieval: ort. CPU [%]':<50} | "
-        f"{ch['retrieval']['cpu_percent']:16.2f} | {qd['retrieval']['cpu_percent']:16.2f} | "
-        f"{fa['retrieval']['cpu_percent']:16.2f} | {mi['retrieval']['cpu_percent']:16.2f} | {es_ret_cpu:16.2f} | {wv_ret_cpu:16.2f}"
-    )
-    print(
-        f"{('Ortalama ' + ck):<50} | "
-        f"{report['mean_recall_chroma']:16.4f} | {report['mean_recall_qdrant']:16.4f} | "
-        f"{report['mean_recall_faiss']:16.4f} | {report['mean_recall_milvus']:16.4f} | {report.get('mean_recall_elasticsearch', float('nan')):16.4f} | {report.get('mean_recall_weaviate', float('nan')):16.4f}"
-    )
+    print(format_row("İndeksleme: DB yazma (add_chunks) [s]", get_val("add_seconds", ""), fmt=".3f", higher_is_better=False))
+    print(format_row("İndeksleme: peak RAM (RSS) [MB]", get_val("idx_mem", ""), fmt=".3f", higher_is_better=False))
+    print(format_row("İndeksleme: ort. CPU [%]", get_val("idx_cpu", ""), fmt=".2f", higher_is_better=False))
+    print(format_row("İndeksleme: toplam (embedding + bu DB) [s]", get_val("idx_total", ""), fmt=".3f", higher_is_better=False))
+    
+    print(format_row("Ortalama retrieval [ms] (sorgu embed + arama)", get_val("ret_avg", ""), fmt=".2f", higher_is_better=False))
+    print(format_row("p50 retrieval latency [ms]", get_val("ret_p50", ""), fmt=".2f", higher_is_better=False))
+    print(format_row("p95 retrieval latency [ms]", get_val("ret_p95", ""), fmt=".2f", higher_is_better=False))
+    
+    print(format_row("Retrieval: peak RAM (RSS) [MB]", get_val("ret_mem", ""), fmt=".3f", higher_is_better=False))
+    print(format_row("Retrieval: ort. CPU [%]", get_val("ret_cpu", ""), fmt=".2f", higher_is_better=False))
+    
+    print(format_row(f"Ortalama {ck}", get_val("recall", ""), fmt=".4f", higher_is_better=True))
+    print(format_row("Ortalama MRR", get_val("mrr", ""), fmt=".4f", higher_is_better=True))
+    print(format_row("Ortalama nDCG@10", get_val("ndcg10", ""), fmt=".4f", higher_is_better=True))
     print("-" * 165)
-    print(
-        f"Daha hızlı retrieval: {report['winner_faster_retrieval']}  |  "
-        f"Daha yüksek {ck}: {report['winner_higher_recall']}"
-    )
+
+    p50_dict = get_val("ret_p50", "")
+    valid_p50 = {k: v for k, v in p50_dict.items() if v is not None and isinstance(v, (int, float)) and v == v}
+    fastest_db = min(valid_p50, key=lambda k: valid_p50[k]) if valid_p50 else "N/A"
+    fastest_p50 = valid_p50[fastest_db] if valid_p50 else 0.0
+
+    mrr_dict = get_val("mrr", "")
+    valid_mrr = {k: v for k, v in mrr_dict.items() if v is not None and isinstance(v, (int, float)) and v == v}
+    best_mrr_db = max(valid_mrr, key=lambda k: valid_mrr[k]) if valid_mrr else "N/A"
+    best_mrr_val = valid_mrr[best_mrr_db] if valid_mrr else 0.0
+
+    summary_line = f"En hızlı (p50): {fastest_db} {fastest_p50:.1f}ms | En yüksek MRR: {best_mrr_db} {best_mrr_val:.3f}"
+    print(summary_line)
     print("=" * 165 + "\n")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="ChromaDB vs Qdrant vs FAISS vs Milvus vs ElasticSearch: indexing ve retrieval benchmark (LLM yok)."
+        description="ChromaDB vs Qdrant vs FAISS vs Milvus vs ElasticSearch vs Weaviate: indexing ve retrieval benchmark (LLM yok)."
     )
     parser.add_argument(
         "--config",
@@ -814,8 +999,15 @@ def main() -> None:
         "chroma_retriever, qdrant_retriever, faiss_retriever, milvus_retriever, elasticsearch_retriever, weaviate_retriever).",
     )
     parser.add_argument("--num-documents", type=int, default=1000)
-    parser.add_argument("--num-queries", type=int, default=100)
+    parser.add_argument("--num-queries", type=int, default=500)
     parser.add_argument("--top-k", type=int, default=10)
+    parser.add_argument(
+        "--num-repeats",
+        type=int,
+        default=3,
+        help="Her DB için retrieval-pass'in kaç kez tekrarlanacağı (ortalama±std için). "
+        "1 verilirse eski tek-geçiş davranışıyla aynı sonucu üretir.",
+    )
     parser.add_argument(
         "--squad-version",
         type=str,
@@ -827,7 +1019,44 @@ def main() -> None:
         action="store_true",
         help="tqdm ilerleme çubuklarını kapat (log/CI için).",
     )
+    parser.add_argument(
+        "--query-seed",
+        type=int,
+        default=42,
+        help="Sorgu seçiminde kullanılacak seed değeri.",
+    )
+    parser.add_argument(
+        "--dump-per-query",
+        action="store_true",
+        help="Her sorgu için metrikleri ayrı bir dosyaya dök.",
+    )
+    parser.add_argument(
+        "--fixed-query-file",
+        type=str,
+        default=None,
+        help="Sabit sorgu seti dosyası (JSON, {'query_ids': [...]})."
+        " Verilirse: bu ID listesi TÜM ölçeklerde kullanılır, ölçeğe özgü sorgu seçimi "
+        "tamamen bypass edilir (_select_queries_for_documents hiç çağrılmaz)."
+        " Verilmezse: bu koşumda otomatik seçilen sorgu ID'leri "
+        "experiments/results/fixed_queries_<timestamp>.json'a yazılır — en küçük ölçekte "
+        "(S1) koşulup üretilen bu dosya sonraki ölçeklerde --fixed-query-file olarak verilmelidir.",
+    )
     args = parser.parse_args()
+
+    if args.num_repeats < 1:
+        raise ValueError(f"--num-repeats must be >= 1, got {args.num_repeats}")
+
+    fixed_query_ids: set[str] | None = None
+    if args.fixed_query_file:
+        fixed_query_file_path = os.path.abspath(args.fixed_query_file)
+        with open(fixed_query_file_path, encoding="utf-8") as f:
+            fixed_query_payload = json.load(f)
+        fixed_query_ids = set(fixed_query_payload["query_ids"])
+        logging.info(
+            "Sabit sorgu seti yüklendi: %s (%d ID) — ölçeğe özgü seçim bypass edildi.",
+            fixed_query_file_path,
+            len(fixed_query_ids),
+        )
 
     if args.config:
         raw = load_yaml(os.path.abspath(args.config))
@@ -880,14 +1109,45 @@ def main() -> None:
         k_values=k_values,
         squad_version=args.squad_version,
         show_progress=not args.no_progress,
+        num_repeats=args.num_repeats,
+        fixed_query_ids=fixed_query_ids,
+        query_seed=args.query_seed,
+        dump_per_query=args.dump_per_query,
     )
 
     _print_table(report)
 
+
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = os.path.join(os.path.dirname(__file__), "..", "experiments", "results")
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"benchmark_db_{ts}.json")
+
+    if not args.fixed_query_file:
+        # Bu koşumda ölçeğe özgü seçilen sorgu ID'lerini kalıcı hale getir; sonraki
+        # ölçekler (S2-S5) bu dosyayı --fixed-query-file olarak vererek aynı
+        # sorgu setini kullanabilir (bkz. DENEY-PLANI-V2.md 0.2).
+        fixed_query_out_path = os.path.join(out_dir, f"fixed_queries_{ts}.json")
+        with open(fixed_query_out_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "query_ids": report["query_ids_used"],
+                    "num_queries": report["num_queries_evaluated"],
+                    "source_num_documents": report["num_documents"],
+                    "timestamp": ts,
+                },
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
+        logging.info(
+            "Sabit sorgu seti adayı yazıldı: %s (%d ID, kaynak ölçek: %d doküman)",
+            fixed_query_out_path,
+            report["num_queries_evaluated"],
+            report["num_documents"],
+        )
+
+    num_docs = report["num_documents"]
+    out_path = os.path.join(out_dir, f"official_scale_{num_docs}docs_6db_topk{top_k}_{ts}.json")
     payload = {
         "timestamp": ts,
         "config_path": os.path.abspath(args.config) if args.config else None,
@@ -900,3 +1160,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

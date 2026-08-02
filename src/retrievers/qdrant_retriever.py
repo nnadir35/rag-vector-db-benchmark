@@ -350,3 +350,28 @@ class QdrantRetriever(Retriever):
             self._collection_ready = False
         except Exception as e:
             raise RuntimeError(f"Failed to clear Qdrant: {e}") from e
+
+    def describe_index(self) -> dict[str, Any]:
+        """Inspect and return runtime index configuration for Qdrant."""
+        url = os.getenv("QDRANT_URL", "").strip()
+        host = os.getenv("QDRANT_HOST", "").strip()
+        is_remote = bool(url or host)
+        in_memory = (not is_remote) and self._config.in_memory
+        info: dict[str, Any] = {
+            "in_memory": in_memory,
+            "collection_name": self._config.collection_name,
+            "distance_metric": self._config.distance_metric,
+        }
+        if self._client is not None and self._collection_ready:
+            try:
+                col = self._client.get_collection(collection_name=self._config.collection_name)
+                hnsw_cfg = getattr(col.config.hnsw_config, "__dict__", str(col.config.hnsw_config))
+                info["hnsw_config"] = hnsw_cfg
+                if hasattr(col.config.hnsw_config, "m"):
+                    info["hnsw_m"] = col.config.hnsw_config.m
+                if hasattr(col.config.hnsw_config, "ef_construct"):
+                    info["hnsw_ef_construction"] = col.config.hnsw_config.ef_construct
+            except Exception:
+                pass
+        return info
+
