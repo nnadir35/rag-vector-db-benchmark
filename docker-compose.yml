@@ -57,7 +57,7 @@ services:
   # VECTOR DATABASES
   # -----------------------------
   qdrant:
-    image: qdrant/qdrant:v1.8.0
+    image: qdrant/qdrant:v1.13.6
     container_name: qdrant_db
     ports:
       - "${QDRANT_PORT:-6333}:6333"
