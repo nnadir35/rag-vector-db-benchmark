@@ -307,15 +307,30 @@ class ChromaRetriever(Retriever):
             raise RuntimeError(f"Failed to retrieve from Chroma: {e}") from e
 
     def clear(self) -> None:
-        """Clear all items in the collection without destroying definition."""
+        """Clear the collection.
+
+        Always attempts server-side deletion via a live client, regardless of
+        in-process ``_client``/``_collection`` state — a fresh ``ChromaRetriever``
+        (e.g. the start of every benchmark_db.py process) starts with both ``None``
+        even though a same-named collection may already exist on a persistent
+        Chroma server from a prior run. Skipping the delete in that case silently
+        accumulates/mismatches stale points across runs. ``delete_collection``
+        raises ``NotFoundError`` when the collection does not exist, which is
+        swallowed here to keep ``clear()`` idempotent.
+        """
+        self._ensure_chroma_imported()
+        from chromadb.errors import NotFoundError
+
         try:
-            # Recreate an empty collection
-            if self._client and self._collection:
-                self._client.delete_collection(self._config.collection_name)
-                self._collection = None
-                # Property _chroma_collection will recreate it on next call
+            if self._client is None:
+                self._client = self._create_chroma_client()
+            self._client.delete_collection(self._config.collection_name)
+        except NotFoundError:
+            pass
         except Exception as e:
             raise RuntimeError(f"Failed to clear ChromaDB: {e}") from e
+        finally:
+            self._collection = None
 
     def describe_index(self) -> dict[str, Any]:
         """Inspect and return runtime index configuration for ChromaDB."""

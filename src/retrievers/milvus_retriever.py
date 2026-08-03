@@ -349,12 +349,20 @@ class MilvusRetriever(Retriever):
             raise RuntimeError(f"Failed to retrieve from Milvus: {e}") from e
 
     def clear(self) -> None:
-        """Clear the collection and reset state."""
+        """Clear the collection and reset state.
+
+        Always attempts server-side deletion via a live client, regardless of
+        in-process ``_client``/``_collection_ready`` state — a fresh
+        ``MilvusRetriever`` (e.g. the start of every benchmark_db.py process)
+        starts with ``_client is None`` even though a same-named collection may
+        already exist on a persistent Milvus server from a prior run. Skipping
+        the delete in that case silently accumulates/mismatches stale entities
+        across runs. ``drop_collection`` is a no-op when the collection does not
+        exist (verified: no exception is raised).
+        """
         try:
-            if self._client is not None:
-                client = self._get_client()
-                if client.has_collection(self._config.collection_name):
-                    client.drop_collection(self._config.collection_name)
+            client = self._get_client()
+            client.drop_collection(self._config.collection_name)
             self._collection_ready = False
             self._next_id = 0
             # Also clean up the local db file if running in memory mode
