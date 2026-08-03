@@ -19,7 +19,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, TypeVar
 
@@ -38,27 +38,31 @@ from tqdm import tqdm
 from src.chunkers.config import FixedSizeChunkerConfig
 from src.chunkers.fixed_size_chunker import FixedSizeChunker
 from src.core.types import Chunk, Document, Embedding, Query
-from src.datasets.config import SQuADDatasetConfig
-from src.datasets.squad_loader import SQuADLoader
-from src.datasets import DatasetLoader
+from src.datasets import (
+    DatasetLoader,
+    MSMARCODatasetConfig,
+    MSMARCOLoader,
+    SQuADDatasetConfig,
+    SQuADLoader,
+)
 from src.embedders.config import SentenceTransformersEmbedderConfig
 from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
 from src.evaluators.config import RetrievalEvaluatorConfig
 from src.evaluators.retrieval_evaluator import RetrievalEvaluator
 from src.retrievers.chroma_retriever import ChromaRetriever
-from src.retrievers.elasticsearch_retriever import ElasticSearchRetriever
-from src.retrievers.weaviate_retriever import WeaviateRetriever
 from src.retrievers.config import (
     ChromaRetrieverConfig,
     ElasticSearchRetrieverConfig,
-    WeaviateRetrieverConfig,
-    QdrantRetrieverConfig,
     FAISSRetrieverConfig,
     MilvusRetrieverConfig,
+    QdrantRetrieverConfig,
+    WeaviateRetrieverConfig,
 )
-from src.retrievers.qdrant_retriever import QdrantRetriever
+from src.retrievers.elasticsearch_retriever import ElasticSearchRetriever
 from src.retrievers.faiss_retriever import FAISSRetriever
 from src.retrievers.milvus_retriever import MilvusRetriever
+from src.retrievers.qdrant_retriever import QdrantRetriever
+from src.retrievers.weaviate_retriever import WeaviateRetriever
 from src.utils.config_loader import build_component_configs, load_yaml
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -191,6 +195,19 @@ def load_squad_corpus(
     combined_queries = val_queries + train_queries
 
     return documents, combined_queries, combined_gt, splits_used
+
+
+def load_dataset_corpus(
+    dataset_config: SQuADDatasetConfig | MSMARCODatasetConfig,
+    num_documents: int,
+) -> tuple[list[Document], list[Query], dict[str, set[str]], list[str]]:
+    """Load a bounded corpus from the configured benchmark dataset."""
+    if isinstance(dataset_config, MSMARCODatasetConfig):
+        loader: DatasetLoader = MSMARCOLoader(replace(dataset_config, max_documents=num_documents))
+        queries, ground_truth = loader.load()
+        documents = loader.load_documents()
+        return documents, queries, ground_truth, ["local-msmarco"]
+    return load_squad_corpus(num_documents, dataset_config.version)
 
 
 def _mean(values: list[float]) -> float:
@@ -563,7 +580,7 @@ def run_benchmark(
     elasticsearch_cfg: ElasticSearchRetrieverConfig,
     weaviate_cfg: WeaviateRetrieverConfig,
     k_values: list[int],
-    squad_version: str,
+    dataset_config: SQuADDatasetConfig | MSMARCODatasetConfig,
     show_progress: bool,
     fixed_query_ids: set[str] | None = None,
     num_repeats: int = 3,
@@ -586,8 +603,8 @@ def run_benchmark(
     evaluator = RetrievalEvaluator(RetrievalEvaluatorConfig(k_values=k_values))
     recall_key = f"recall@{top_k}"
 
-    documents, all_queries, ground_truth, splits_used = load_squad_corpus(
-        num_documents, squad_version
+    documents, all_queries, ground_truth, splits_used = load_dataset_corpus(
+        dataset_config, num_documents
     )
     doc_ids = {d.id for d in documents}
 
@@ -1005,7 +1022,10 @@ def run_benchmark(
         disk_size_info["faiss"] = measure_disk_size_mb("faiss", faiss_cfg.persist_path)
 
     ret_dict = {
-        "squad_version": squad_version,
+        "dataset": "msmarco" if isinstance(dataset_config, MSMARCODatasetConfig) else "squad",
+        "dataset_version": (
+            None if isinstance(dataset_config, MSMARCODatasetConfig) else dataset_config.version
+        ),
         "splits_used": splits_used,
         "fixed_query_set": fixed_query_ids is not None,
         "query_seed": query_seed,
@@ -1284,15 +1304,15 @@ def _print_table(report: dict[str, Any]) -> None:
     print(format_row("İndeksleme: peak RAM (RSS) [MB]", get_val("idx_mem", ""), fmt=".3f", higher_is_better=False))
     print(format_row("İndeksleme: ort. CPU [%]", get_val("idx_cpu", ""), fmt=".2f", higher_is_better=False))
     print(format_row("İndeksleme: toplam (embedding + bu DB) [s]", get_val("idx_total", ""), fmt=".3f", higher_is_better=False))
-    
+
     print(format_row("Ortalama retrieval [ms] (sorgu embed + arama)", get_val("ret_avg", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p50 retrieval latency [ms]", get_val("ret_p50", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p50 search-only latency [ms] (embed hariç)", get_val("search_only_p50", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p95 retrieval latency [ms]", get_val("ret_p95", ""), fmt=".2f", higher_is_better=False))
-    
+
     print(format_row("Retrieval: peak RAM (RSS) [MB]", get_val("ret_mem", ""), fmt=".3f", higher_is_better=False))
     print(format_row("Retrieval: ort. CPU [%]", get_val("ret_cpu", ""), fmt=".2f", higher_is_better=False))
-    
+
     print(format_row(f"Ortalama {ck}", get_val("recall", ""), fmt=".4f", higher_is_better=True))
     print(format_row("Ortalama MRR", get_val("mrr", ""), fmt=".4f", higher_is_better=True))
     print(format_row("Ortalama nDCG@10", get_val("ndcg10", ""), fmt=".4f", higher_is_better=True))
@@ -1340,6 +1360,9 @@ def main() -> None:
         default="squad_v2",
         help="HuggingFace datasets adı (varsayılan: squad_v2).",
     )
+    parser.add_argument("--collection-path", type=str, default=None, help="Local MS MARCO collection TSV/TSV.GZ path.")
+    parser.add_argument("--queries-path", type=str, default=None, help="Local MS MARCO queries TSV/TSV.GZ path.")
+    parser.add_argument("--qrels-path", type=str, default=None, help="Local MS MARCO qrels TSV/TSV.GZ path.")
     parser.add_argument(
         "--no-progress",
         action="store_true",
@@ -1402,6 +1425,7 @@ def main() -> None:
         exp = build_component_configs(raw)
         chunker_cfg = exp.chunker
         embedder_cfg = exp.embedder
+        dataset_config = exp.dataset
         k_values = sorted({*exp.evaluator.k_values, args.top_k})
         chroma_dict = {k: v for k, v in raw.get("chroma_retriever", {}).items() if k != "type"}
         qdrant_dict = {k: v for k, v in raw.get("qdrant_retriever", {}).items() if k != "type"}
@@ -1431,6 +1455,18 @@ def main() -> None:
         )
         elasticsearch_cfg = ElasticSearchRetrieverConfig(index_name="bench_elasticsearch_squad")
         weaviate_cfg = WeaviateRetrieverConfig(collection_name="bench_weaviate_squad")
+        if args.collection_path or args.queries_path or args.qrels_path:
+            if not (args.collection_path and args.queries_path and args.qrels_path):
+                raise ValueError("--collection-path, --queries-path, and --qrels-path must be supplied together.")
+            dataset_config: SQuADDatasetConfig | MSMARCODatasetConfig = MSMARCODatasetConfig(
+                collection_path=args.collection_path,
+                queries_path=args.queries_path,
+                qrels_path=args.qrels_path,
+                max_documents=args.num_documents,
+                num_queries=args.num_queries,
+            )
+        else:
+            dataset_config = SQuADDatasetConfig(version=args.squad_version)
 
     top_k = args.top_k
     report = run_benchmark(
@@ -1446,7 +1482,7 @@ def main() -> None:
         elasticsearch_cfg=elasticsearch_cfg,
         weaviate_cfg=weaviate_cfg,
         k_values=k_values,
-        squad_version=args.squad_version,
+        dataset_config=dataset_config,
         show_progress=not args.no_progress,
         num_repeats=args.num_repeats,
         fixed_query_ids=fixed_query_ids,
@@ -1504,4 +1540,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

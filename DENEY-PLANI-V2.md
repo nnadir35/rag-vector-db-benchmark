@@ -6,6 +6,9 @@ Korpus: **MS MARCO passage** (8.841.823 pasaj, 6.980 dev sorgu). Sorgu seti,
 gold pasajı taban ölçekte (S1) bulunan sorgulardan seçilen, tekrarlanabilir
 seed'li (seed=42) 500 sorguluk sabit bir örneklem.
 
+**Güncel durum:** MS MARCO loader, local TSV / TSV.GZ streaming okuma, S1 alt-küme
+garantisi ve 500 sabit sorgu seçimi kod tabanında tamamlandı ve test edildi.
+
 ---
 
 # BÖLÜM 0 — Deneylerden ÖNCE yapılacak kod ön koşulları
@@ -30,7 +33,7 @@ olarak duruyor (Pinecone ile aynı desen — mevcut ama sistematik koşuma dahil
 değil) ve Deney B'de ground truth referansı **Milvus FLAT** ile üretiliyor
 (zaten Docker'da, ilkeyi bozmuyor).
 
-## 0.2 — Sabit sorgu seti (KRİTİK) — ✅ hazır, MS MARCO'ya özel doğrulama gerekli
+## 0.2 — Sabit sorgu seti (KRİTİK) — ✅ hazır
 
 Pasaj koleksiyonu `pid` sırasına göre prefix alınarak ölçekleniyor
 (S1 ⊂ S2 ⊂ S3 ⊂ S4 ⊂ S5 ⊂ S6), böylece küçük ölçeğin korpusu büyüğünün alt
@@ -39,9 +42,12 @@ sabitleniyor, tüm ölçeklerde aynısı kullanılıyor — ölçekler arası re
 düşüşü saf distractor etkisi oluyor, sorgu setinin değişmesinden kaynaklı
 bir karışıklık (confound) olmuyor.
 
-**Loader yazılırken doğrulanacak:** S1 içinde en az 500 sorgunun gold
-pasajı bulunmalı. Bulunmuyorsa S1'i büyütmek ya da seçim stratejisini
-revize etmek gerekir — bu, kod yazımının ilk kontrol adımı.
+MS MARCO loader, S1 için seçilen 500 sorgunun gold `pid` karşılıklarını zorunlu
+olarak korpusa dahil ediyor; kalan slotlar koleksiyon sırasıyla 1.000 pasaja
+tamamlanıyor.
+
+**Doğrulama:** S1 içinde seçilen 500 sorgunun gold pasajları mevcut ve toplam
+yüklenen pasaj sayısı tam 1.000.
 
 ## 0.3 — Değişken sınıflandırması — ✅ hazır
 
@@ -85,9 +91,10 @@ koşumunda ölçülerek doğrulanmalı.
 
 # BÖLÜM 1 — VERİ SETİ
 
-**MS MARCO passage** (Bajaj ve ark., 2016), BEIR standardında
-`{corpus, queries, qrels}` JSONL formatında. `DatasetLoader` ABC'sine yeni
-bir `MSMARCOLoader` yazılacak (mevcut retriever/config deseniyle tutarlı).
+**MS MARCO passage** (Bajaj ve ark., 2016), yerel `collection.tsv`,
+`queries.dev.small.tsv` ve `qrels.dev.small.tsv` dosyalarından okunuyor.
+`DatasetLoader` ABC'sine uyumlu `MSMARCOLoader` kod tabanında hazır
+(mevcut retriever/config deseniyle tutarlı).
 
 | Korpus           | Doküman   | Test sorgu  |
 | ---------------- | --------- | ----------- |
@@ -105,11 +112,11 @@ bir `MSMARCOLoader` yazılacak (mevcut retriever/config deseniyle tutarlı).
 | S6     | 200.000      | Üst ölçek                                            |
 
 **Geçiş kontrol listesi (loader yazılırken):**
-- [ ] `MSMARCOLoader`, `DatasetLoader` ABC'sine uyuyor
-- [ ] Pasaj prefix mantığı (S1⊂S2⊂S3⊂S4⊂S5⊂S6) kuruluyor
-- [ ] S1'de en az 500 sorgunun gold pasajı var (bkz. 0.2)
-- [ ] `_select_queries_for_documents()` MS MARCO qrels formatına genelleştirildi
-- [ ] `benchmark_all_dbs.yaml`'a `dataset: msmarco` seçeneği eklendi
+- [x] `MSMARCOLoader`, `DatasetLoader` ABC'sine uyuyor
+- [x] Pasaj prefix mantığı (S1⊂S2⊂S3⊂S4⊂S5⊂S6) kuruluyor
+- [x] S1'de en az 500 sorgunun gold pasajı var (bkz. 0.2)
+- [x] `_select_queries_for_documents()` MS MARCO qrels formatına genelleştirildi
+- [x] `benchmark_all_dbs.yaml`'a `dataset: msmarco` seçeneği eklendi
 
 **Tek korpus notu:** Sonuçlar yalnızca MS MARCO passage korpusu için
 geçerli olacak. Genellenebilirlik iddiası bu planda kurulmuyor; istenirse

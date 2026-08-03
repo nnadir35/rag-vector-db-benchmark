@@ -17,6 +17,7 @@
 - **Core types:** `src/core/types.py` → `Chunk`, `Embedding`, `Query`, `RetrievalResult`, `RetrievedChunk`
 - **Retriever configs:** `src/retrievers/config.py` → frozen dataclasses, one per DB
 - **Retrievers:** `src/retrievers/<name>_retriever.py` — lazy import pattern via `TYPE_CHECKING`. 6 DBs are benchmarked: ChromaDB, Qdrant, FAISS, Milvus, ElasticSearch, Weaviate (Pinecone adapter exists but is excluded from the systematic benchmark — managed-only SaaS)
+- **Datasets:** `src/datasets/` now supports both `SQuADLoader` and `MSMARCOLoader`. The default systematic benchmark config (`experiments/configs/benchmark_all_dbs.yaml`) uses MS MARCO passage from local TSV / TSV.GZ files with streaming reads.
 - **Config loader:** `src/utils/config_loader.py` → `build_component_configs()` parses YAML → dataclasses
 - **Benchmark script:** `scripts/benchmark_db.py` → `run_benchmark()` runs all 6 DBs, `main()` handles CLI + YAML
 - **Results:** `experiments/results/` — JSON files, do NOT read these into context. `official_*.json` at the top level are the citable results; `archive/` and `debug/` subfolders are not

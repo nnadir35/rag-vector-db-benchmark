@@ -19,8 +19,13 @@ from datetime import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.chunkers.fixed_size_chunker import FixedSizeChunker
-from src.datasets.squad_loader import SQuADLoader
-from src.datasets import DatasetLoader
+from src.datasets import (
+    DatasetLoader,
+    MSMARCODatasetConfig,
+    MSMARCOLoader,
+    SQuADDatasetConfig,
+    SQuADLoader,
+)
 from src.embedders.sentence_transformers_embedder import SentenceTransformersEmbedder
 from src.evaluators.answer_quality_evaluator import AnswerQualityEvaluator
 from src.evaluators.generation_evaluator import GenerationEvaluator
@@ -86,7 +91,12 @@ async def main_async(args: argparse.Namespace) -> None:
 
     # 2. Setup Data Loader
     logging.info("Loading dataset...")
-    loader: DatasetLoader = SQuADLoader(exp_config.dataset)
+    if isinstance(exp_config.dataset, MSMARCODatasetConfig):
+        loader: DatasetLoader = MSMARCOLoader(exp_config.dataset)
+    elif isinstance(exp_config.dataset, SQuADDatasetConfig):
+        loader = SQuADLoader(exp_config.dataset)
+    else:  # pragma: no cover - type narrowing guard
+        raise TypeError(f"Unsupported dataset config: {type(exp_config.dataset)!r}")
     try:
         queries, ground_truth = loader.load()
         gold_answers = loader.load_gold_answers()
@@ -108,11 +118,11 @@ async def main_async(args: argparse.Namespace) -> None:
     logging.info("Initializing Generator and Evaluators...")
     generator = UniversalGenerator(exp_config.generator)
     evaluator = RetrievalEvaluator(exp_config.evaluator)
-    
+
     judge_config = exp_config.judge_generator or exp_config.generator
     judge_gen = UniversalGenerator(judge_config) if exp_config.judge_generator else generator
     generation_evaluator = GenerationEvaluator(judge_generator=judge_gen)
-    
+
     answer_quality_evaluator = AnswerQualityEvaluator()
 
     logging.info("Initializing Embedder and computing embeddings...")

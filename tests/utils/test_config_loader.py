@@ -5,6 +5,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
+from src.datasets.config import MSMARCODatasetConfig
 from src.utils.config_loader import build_component_configs, load_yaml
 
 
@@ -61,3 +62,17 @@ def test_build_component_configs():
     # Check defaults handled properly where missing
     assert exp_config.evaluator.k_values == [1, 3, 5, 10]
     assert exp_config.chunker.chunk_size == 512
+
+
+def test_build_component_configs_supports_msmarco() -> None:
+    """The dataset type discriminator selects the local MS MARCO config."""
+    config = build_component_configs({
+        "dataset": {
+            "type": "msmarco",
+            "collection_path": "collection.tsv",
+            "queries_path": "queries.tsv",
+            "qrels_path": "qrels.tsv",
+        }
+    })
+
+    assert isinstance(config.dataset, MSMARCODatasetConfig)

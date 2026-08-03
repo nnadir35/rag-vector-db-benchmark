@@ -15,7 +15,7 @@ Bu akışta, dokümanlar sisteme beslenir, parçalara ayrılır (Chunker), vekt�
 
 ```mermaid
 flowchart TD
-    Dataset["Dataset Loader (squad_loader.py)"] --> Chunker["FixedSizeChunker (fixed_size_chunker.py)"]
+    Dataset["Dataset Loader (SQuAD / MS MARCO)"] --> Chunker["FixedSizeChunker (fixed_size_chunker.py)"]
     Chunker --> Embedder["SentenceTransformersEmbedder (sentence_transformers_embedder.py)"]
     
     Embedder --> DB["Retriever (e.g. ChromaRetriever)"]
@@ -141,6 +141,8 @@ Bir LLM'i "hakem" (LLM-as-a-judge) olarak kullanarak üretilen cevabı inceler:
 
 ## 6. Bilinen Sınırlamalar (Known Limitations)
 
-- Veri setindeki (SQuAD) ground truth eşleşmeleri şu an yalnızca ID/hash bazlı yapılmaktadır; semantik eşleşme yapılmamaktadır.
+- Veri katmanı iki modda çalışır: SQuAD answer-quality deneyleri ve MS MARCO passage retrieval
+  deneyleri. MS MARCO tarafında gold eşleşme qrels üzerinden yapılır; SQuAD tarafında cevap
+  metinleri üzerinden değerlendirme yapılır.
 - Test kapsamı ElasticSearch için sınırlıdır, özellikle auth gerektiren cloud versiyonları test edilmemiştir.
 - GenerationEvaluator, hakem modeli (judge) olarak kullanılan LLM'in performansına bağımlıdır (küçük yerel modeller yanıltıcı metrikler üretebilir).

@@ -11,10 +11,10 @@
 ## 📍 ŞU ANKİ DURUM
 
 ```
-SON GÜNCELLEME : 02.08.2026
-AKTİF GÖREV    : BİTTİ! Bütün veritabanları entegre edildi ve benchmark sonuçları güncellendi! 🚀
+SON GÜNCELLEME : 03.08.2026
+AKTİF GÖREV    : BİTTİ! Bütün veritabanları entegre edildi, MS MARCO loader eklendi ve benchmark sonuçları güncellendi! 🚀
 SONRAKİ GÖREV  : Entegrasyon / Kullanıcı Testi / Bakım
-TAMAMLANAN     : 17/17
+TAMAMLANAN     : 18/18
 ```
 
 ---
@@ -44,6 +44,7 @@ TAMAMLANAN     : 17/17
 - [x] 15. ElasticSearchRetriever — 25.05.2026 ✅
 - [x] 16. WeaviateRetriever — 15.07.2026 ✅
 - [x] 17. 6-DB Benchmark Güncellemesi — 24.07.2026 ✅
+- [x] 18. MSMARCOLoader — 03.08.2026 ✅
 
 ---
 
@@ -68,6 +69,7 @@ Sırayı bozma. Her biri bir öncekine bağlı.
 - [x] **15. ElasticSearchRetriever**
 - [x] **16. WeaviateRetriever**
 - [x] **17. 6-DB Benchmark Güncellemesi**
+- [x] **18. MSMARCOLoader**
 
 
 ---

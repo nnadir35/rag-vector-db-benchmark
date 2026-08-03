@@ -1,4 +1,4 @@
-"""Configuration for SQuAD dataset loader."""
+"""Configuration objects for dataset loaders."""
 
 from dataclasses import dataclass, field
 
@@ -27,3 +27,28 @@ class SQuADDatasetConfig:
 
         if not self.version:
             raise ValueError("version cannot be empty.")
+
+
+@dataclass(frozen=True)
+class MSMARCODatasetConfig:
+    """Configuration for a local MS MARCO passage-ranking dataset.
+
+    The three input files may be either plain TSV or gzip-compressed TSV files.
+    ``max_documents`` is deliberately required: the full MS MARCO collection is
+    too large to materialize in memory for a benchmark run.
+    """
+
+    collection_path: str
+    queries_path: str
+    qrels_path: str
+    max_documents: int = 1_000
+    num_queries: int = 500
+
+    def __post_init__(self) -> None:
+        """Validate paths and bounded corpus/query sizes."""
+        if not self.collection_path or not self.queries_path or not self.qrels_path:
+            raise ValueError("collection_path, queries_path, and qrels_path cannot be empty.")
+        if self.max_documents <= 0:
+            raise ValueError("max_documents must be positive.")
+        if self.num_queries <= 0:
+            raise ValueError("num_queries must be positive.")

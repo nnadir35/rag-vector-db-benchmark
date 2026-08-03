@@ -1,10 +1,13 @@
 experiment:
-  name: "benchmark_all_dbs_squad"
+  name: "benchmark_all_dbs_msmarco"
 
 dataset:
-  split: "validation"
-  max_samples: 1000
-  version: "squad_v2"
+  type: "msmarco"
+  collection_path: "data/msmarco/collection.tsv"
+  queries_path: "data/msmarco/queries.dev.small.tsv"
+  qrels_path: "data/msmarco/qrels.dev.small.tsv"
+  max_documents: 1000
+  num_queries: 500
 
 chunker:
   chunk_size: 512
@@ -23,20 +26,20 @@ pipeline:
   top_k: 10
 
 chroma_retriever:
-  collection_name: "bench_chroma_squad"
+  collection_name: "bench_chroma_msmarco"
   hnsw_m: 16
   hnsw_ef_construction: 200
   hnsw_ef_search: 64
 
 qdrant_retriever:
-  collection_name: "bench_qdrant_squad"
+  collection_name: "bench_qdrant_msmarco"
   in_memory: false
   hnsw_m: 16
   hnsw_ef_construction: 200
   hnsw_ef_search: 64
 
 faiss_retriever:
-  collection_name: "bench_faiss_squad"
+  collection_name: "bench_faiss_msmarco"
   distance_metric: "cosine"
   index_type: "hnsw"
   hnsw_m: 16
@@ -44,7 +47,7 @@ faiss_retriever:
   hnsw_ef_search: 64
 
 milvus_retriever:
-  collection_name: "bench_milvus_squad"
+  collection_name: "bench_milvus_msmarco"
   distance_metric: "cosine"
   in_memory: false
   hnsw_m: 16
@@ -52,7 +55,7 @@ milvus_retriever:
   hnsw_ef_search: 64
 
 elasticsearch_retriever:
-  index_name: "bench_elasticsearch_squad"
+  index_name: "bench_elasticsearch_msmarco"
   distance_metric: "cosine"
   in_memory: false
   host: "http://localhost:9200"
@@ -61,7 +64,7 @@ elasticsearch_retriever:
   hnsw_ef_construction: 200
 
 weaviate_retriever:
-  collection_name: "bench_weaviate_squad"
+  collection_name: "bench_weaviate_msmarco"
   distance_metric: "cosine"
   in_memory: false
   hnsw_m: 16

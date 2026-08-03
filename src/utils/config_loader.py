@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.chunkers.config import FixedSizeChunkerConfig
-from src.datasets.config import SQuADDatasetConfig
+from src.datasets.config import MSMARCODatasetConfig, SQuADDatasetConfig
 from src.embedders.config import SentenceTransformersEmbedderConfig
 from src.evaluators.config import RetrievalEvaluatorConfig
 from src.generators.config import UniversalGeneratorConfig
@@ -26,7 +26,7 @@ class ExperimentConfig:
     name: str
     chunker: FixedSizeChunkerConfig
     embedder: SentenceTransformersEmbedderConfig
-    dataset: SQuADDatasetConfig
+    dataset: SQuADDatasetConfig | MSMARCODatasetConfig
     generator: UniversalGeneratorConfig
     evaluator: RetrievalEvaluatorConfig
     pipeline: RAGPipelineConfig
@@ -51,11 +51,11 @@ def load_yaml(file_path: str) -> dict[str, Any]:
     """
     try:
         import yaml
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
             "The 'PyYAML' package is required but not installed. "
             "Install it with: pip install PyYAML"
-        )
+        ) from exc
 
     try:
         with open(file_path, encoding="utf-8") as f:
@@ -82,11 +82,20 @@ def build_component_configs(config_dict: dict[str, Any]) -> ExperimentConfig:
     judge_gen_dict = config_dict.get("judge_generator")
     judge_gen_config = UniversalGeneratorConfig(**judge_gen_dict) if judge_gen_dict else None
 
+    dataset_dict = dict(config_dict.get("dataset", {}))
+    dataset_type = dataset_dict.pop("type", "squad").lower()
+    if dataset_type == "squad":
+        dataset_config: SQuADDatasetConfig | MSMARCODatasetConfig = SQuADDatasetConfig(**dataset_dict)
+    elif dataset_type == "msmarco":
+        dataset_config = MSMARCODatasetConfig(**dataset_dict)
+    else:
+        raise ValueError(f"Unsupported dataset type: {dataset_type}")
+
     return ExperimentConfig(
         name=exp_name,
         chunker=FixedSizeChunkerConfig(**config_dict.get("chunker", {})),
         embedder=SentenceTransformersEmbedderConfig(**config_dict.get("embedder", {})),
-        dataset=SQuADDatasetConfig(**config_dict.get("dataset", {})),
+        dataset=dataset_config,
         generator=UniversalGeneratorConfig(**config_dict.get("generator", {})),
         evaluator=RetrievalEvaluatorConfig(**config_dict.get("evaluator", {})),
         pipeline=RAGPipelineConfig(**config_dict.get("pipeline", {})),

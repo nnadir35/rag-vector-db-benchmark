@@ -129,9 +129,12 @@ rag-vector-db-benchmark/
 **Responsibility**: Define dataset loaders and data structures for queries, documents, and ground truth.
 
 **What belongs here**:
-- Dataset loader implementations, e.g. `squad_loader.py` (`SQuADLoader`), which implements
-  `load()`, `load_documents()`, and `load_gold_answers()` — the last returns the gold answer
-  strings per query, used by `AnswerQualityEvaluator` to compute EM/F1
+- Dataset loader implementations, e.g. `squad_loader.py` (`SQuADLoader`) and
+  `msmarco_loader.py` (`MSMARCOLoader`)
+- `SQuADLoader` implements `load()`, `load_documents()`, and `load_gold_answers()` — the last
+  returns the gold answer strings per query, used by `AnswerQualityEvaluator` to compute EM/F1
+- `MSMARCOLoader` streams local TSV / TSV.GZ files (`collection.tsv`, `queries.dev.small.tsv`,
+  `qrels.dev.small.tsv`) and keeps only the selected scale in memory
 - Dataset-specific data structures
 - Dataset registry and factory functions
 - Data validation and schema checking
@@ -197,7 +200,8 @@ rag-vector-db-benchmark/
   `baseline_chroma.yaml`, `baseline_qdrant.yaml`, `baseline_faiss.yaml`, `baseline_milvus.yaml`,
   `baseline_elasticsearch.yaml`, `baseline_weaviate.yaml` (one per retriever, retrieval-only,
   `top_k=10`), `baseline_ollama.yaml` / `baseline_ollama_separate_judge.yaml` (end-to-end),
-  `benchmark_all_dbs.yaml` (runs all 6 retrievers), `docker_rag_api.yaml`
+  `benchmark_all_dbs.yaml` (runs all 6 retrievers on MS MARCO passage via local TSV inputs),
+  `docker_rag_api.yaml`
 - Configuration templates
 - Configuration validation schemas
 - Experiment metadata files

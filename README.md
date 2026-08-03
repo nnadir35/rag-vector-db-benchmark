@@ -10,7 +10,7 @@
 
 This framework benchmarks end-to-end RAG (Retrieval-Augmented Generation) pipelines: how accurately an AI system retrieves relevant documents and generates correct answers from a company's internal knowledge base.
 
-## Real Benchmark Results (SQuAD v2 · 100 queries, top_k=10, real Docker services)
+## Historical Benchmark Results (SQuAD v2 · 100 queries, top_k=10, real Docker services)
 
 Retrieval quality (MRR / nDCG / Recall) is **identical across all 6 databases** at
 this scale — with ~100 documents every DB does an effectively-exact nearest-neighbor
@@ -29,7 +29,9 @@ approximate indexing kicks in, see below). What differs is speed:
 *Quality metrics (MRR/nDCG/Recall) from `experiments/results/official_baseline_<db>_100q_topk10_*.json`
 (100 queries against the SQuAD v2 validation split). Latency figures from the ~100-document
 scale run `experiments/results/official_scale_100docs_6db_GPU_realserver_20260716_150826.json`
-— a separate run at comparable scale, since the baseline files don't record per-query timing.*
+— a separate run at comparable scale, since the baseline files don't record per-query timing.
+The current systematic benchmark configuration uses MS MARCO passage via local TSV / TSV.GZ
+files; see `experiments/configs/benchmark_all_dbs.yaml` for the live dataset settings.*
 
 ### At 1000 documents
 
@@ -54,6 +56,9 @@ see [`in_memory` semantics](#retrieverin_memory--read-this-before-comparing-dbs)
   Pinecone adapter also exists (`src/retrievers/pinecone_retriever.py`) but is **not** part of
   the systematic benchmark — it's managed-only SaaS and can't be run against local Docker like
   the others.
+- **Two dataset modes**: SQuAD is kept for historical answer-quality experiments, while the
+  current retrieval benchmark runs on MS MARCO passage loaded from local `collection.tsv`,
+  `queries.dev.small.tsv`, and `qrels.dev.small.tsv` files with streaming readers.
 - **Measure before you ship**: Know your retrieval quality with real numbers before going to production
 - **Full privacy option**: Runs entirely locally with Ollama — no data leaves your servers
 
@@ -115,7 +120,7 @@ combined run:
 | `baseline_weaviate.yaml` | Weaviate retriever |
 | `baseline_ollama.yaml` | End-to-end run with the Ollama generator |
 | `baseline_ollama_separate_judge.yaml` | Same, with a separate LLM used as judge |
-| `benchmark_all_dbs.yaml` | Runs all 6 retrievers back-to-back for comparison |
+| `benchmark_all_dbs.yaml` | Runs all 6 retrievers on MS MARCO passage via local TSV inputs |
 | `docker_rag_api.yaml` | Config used by the Dockerized `api.py` service |
 
 ### `retriever.in_memory` — read this before comparing DBs

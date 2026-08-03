@@ -64,6 +64,11 @@ Yerel gömülü (`:memory:`) Qdrant ile karşılaştırmak için aynı komutta `
 docker compose exec -e QDRANT_HOST= -e QDRANT_URL= rag-app python scripts/benchmark_db.py --num-documents 200 --num-queries 30 --no-progress
 ```
 
+Not: `scripts/benchmark_db.py` artık hem SQuAD tabanlı eski konfigürasyonları hem de
+`dataset: msmarco` içeren MS MARCO TSV konfigürasyonlarını okuyabiliyor. Docker API
+örneği (`experiments/configs/docker_rag_api.yaml`) ise halen SQuAD tabanlı küçük demo
+kurulumunu kullanıyor.
+
 ## Durdurma
 
 ```bash
