@@ -21,6 +21,7 @@ htmlcov/
 .ipynb_checkpoints/
 
 # Local Database / Vector Store Persist Files & Folders
+data/msmarco/
 *.db
 *.db/
 *.index
