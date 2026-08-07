@@ -62,11 +62,20 @@ class MockMilvusClient:
             def __init__(self) -> None:
                 self.indexes: list[dict[str, Any]] = []
 
-            def add_index(self, field_name: str, index_type: str, metric_type: str) -> None:
+            def add_index(
+                self,
+                field_name: str,
+                index_type: str,
+                metric_type: str,
+                params: dict[str, Any] | None = None,
+                **kwargs: Any,
+            ) -> None:
                 self.indexes.append({
                     "field_name": field_name,
                     "index_type": index_type,
                     "metric_type": metric_type,
+                    "params": params,
+                    **kwargs,
                 })
         return IndexParams()
 
