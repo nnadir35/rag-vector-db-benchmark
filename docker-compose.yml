@@ -175,7 +175,7 @@ services:
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.27.0
     ports:
-      - "8080:8080"
+      - "${WEAVIATE_PORT:-8080}:8080"
       - "50051:50051"
     environment:
       QUERY_DEFAULTS_LIMIT: 25
