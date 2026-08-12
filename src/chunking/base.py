@@ -1,18 +1,19 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 @dataclass(frozen=True)
 class ChunkDTO:
     """Data Transfer Object for a text chunk."""
     content: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 class BaseChunker(ABC):
     """Abstract base class for all chunking strategies."""
-    
+
     @abstractmethod
-    def chunk_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> List[ChunkDTO]:
+    def chunk_text(self, text: str, metadata: dict[str, Any] | None = None) -> list[ChunkDTO]:
         """
         Splits text into chunks.
         

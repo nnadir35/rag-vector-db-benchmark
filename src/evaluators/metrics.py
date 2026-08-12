@@ -137,7 +137,7 @@ def exact_match_score(prediction: str, gold_answers: list[str]) -> float:
     ve prediction da normalize sonrası boşsa 1.0 döner (SQuAD 2.0 kuralı)."""
     if not gold_answers:
         return 1.0 if not normalize_answer(prediction) else 0.0
-    
+
     for gold in gold_answers:
         if normalize_answer(prediction) == normalize_answer(gold):
             return 1.0
@@ -155,17 +155,17 @@ def f1_score(prediction: str, gold_answers: list[str]) -> float:
     def _get_f1(pred: str, gold: str) -> float:
         pred_toks = normalize_answer(pred).split()
         gold_toks = normalize_answer(gold).split()
-        
+
         if not pred_toks or not gold_toks:
             # Both empty gives 1.0, otherwise 0.0
             return 1.0 if pred_toks == gold_toks else 0.0
-        
+
         common = Counter(pred_toks) & Counter(gold_toks)
         num_same = sum(common.values())
-        
+
         if num_same == 0:
             return 0.0
-            
+
         precision = 1.0 * num_same / len(pred_toks)
         recall = 1.0 * num_same / len(gold_toks)
         f1 = (2 * precision * recall) / (precision + recall)
@@ -184,22 +184,22 @@ def check_ocr_quality(text: str, language: str = "eng") -> dict:
     total_chars = len(text)
     if total_chars == 0:
         return {"space_ratio": 0.0, "special_char_ratio": 0.0, "flag": True}
-        
+
     spaced_matches = len(re.findall(r'\b\w\s\w\s\w\b', text))
     space_ratio = spaced_matches / total_chars
-    
+
     special_char_ratio = 0.0
     flag = False
-    
+
     if language == "deu":
         special_chars = sum(1 for c in text if c in 'äöüßÄÖÜ')
         special_char_ratio = special_chars / total_chars
         if special_chars == 0:
             flag = True
-            
+
     if total_chars < 50:
         flag = True
-        
+
     return {
         "space_ratio": space_ratio,
         "special_char_ratio": special_char_ratio,

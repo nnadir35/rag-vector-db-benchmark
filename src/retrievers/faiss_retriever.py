@@ -28,7 +28,6 @@ from ..core.types import (
 )
 from .config import FAISSRetrieverConfig
 
-
 FAISS_ADD_BATCH_SIZE = 512  # modül seviyesinde sabit
 
 

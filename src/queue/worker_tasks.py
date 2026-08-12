@@ -1,10 +1,10 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from src.chunking.recursive import RecursiveCharacterChunker
 from src.chunking.semantic import SemanticChunker
-from src.embedding.openai import OpenAIEmbedder
 from src.embedding.bgem3 import BGEM3Embedder
+from src.embedding.openai import OpenAIEmbedder
 
 from .dto import IngestionBatchDTO, ProcessedBatchResultDTO, ProcessedChunkDTO
 
@@ -12,9 +12,9 @@ logger = logging.getLogger("rq.worker")
 
 class MockVectorDB:
     """Mock Vector Database adapter to simulate embedding ingestion."""
-    
+
     @staticmethod
-    def insert_chunks(chunks: List[ProcessedChunkDTO]) -> None:
+    def insert_chunks(chunks: list[ProcessedChunkDTO]) -> None:
         logger.info(f"[MockVectorDB] Successfully ingested {len(chunks)} chunks into vector database.")
         for i, chunk in enumerate(chunks[:3]):
             logger.info(
@@ -24,7 +24,7 @@ class MockVectorDB:
         if len(chunks) > 3:
             logger.info(f"[MockVectorDB] ... and {len(chunks) - 3} more chunks.")
 
-def get_chunker(name: str, params: Dict[str, Any]):
+def get_chunker(name: str, params: dict[str, Any]):
     """Factory function to resolve chunkers."""
     if name == "recursive":
         return RecursiveCharacterChunker(**params)
@@ -33,7 +33,7 @@ def get_chunker(name: str, params: Dict[str, Any]):
     else:
         raise ValueError(f"Unknown chunker name: {name}")
 
-def get_embedder(name: str, params: Dict[str, Any]):
+def get_embedder(name: str, params: dict[str, Any]):
     """Factory function to resolve embedders."""
     if name == "openai":
         return OpenAIEmbedder(**params)
@@ -49,21 +49,21 @@ def process_batch(batch: IngestionBatchDTO) -> ProcessedBatchResultDTO:
         chunker = get_chunker(batch.chunker_name, batch.chunker_params)
         embedder = get_embedder(batch.embedder_name, batch.embedder_params)
 
-        all_processed_chunks: List[ProcessedChunkDTO] = []
-        
+        all_processed_chunks: list[ProcessedChunkDTO] = []
+
         # 1. Her bir dokümanı parçalara ayır
         for doc in batch.documents:
             doc_metadata = doc.metadata.copy() if doc.metadata else {}
             doc_metadata["source_document_id"] = doc.id
-            
+
             chunks = chunker.chunk_text(doc.content, metadata=doc_metadata)
             if not chunks:
                 continue
-                
+
             # 2. Parçaları vektörleştir
             chunk_contents = [c.content for c in chunks]
             embeddings = embedder.embed_batch(chunk_contents)
-            
+
             for idx, (chunk, emb_dto) in enumerate(zip(chunks, embeddings)):
                 chunk_id = f"{doc.id}_chunk_{chunk.metadata.get('chunk_index', idx)}"
                 processed_chunk = ProcessedChunkDTO(

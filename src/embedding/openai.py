@@ -1,16 +1,18 @@
 import os
-from typing import List
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 from .base import BaseEmbedder, EmbeddingDTO
+
 
 class OpenAIEmbedder(BaseEmbedder):
     """OpenAI embedding implementation with rate-limit protection."""
-    
+
     def __init__(self, api_key: str | None = None, model_name: str = "text-embedding-3-small") -> None:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key must be provided via constructor or OPENAI_API_KEY env var.")
-        
+
         self.model_name = model_name
         self._client = None
 
@@ -31,7 +33,7 @@ class OpenAIEmbedder(BaseEmbedder):
     )
     def _call_api_with_retry(self, input_data: list[str]) -> list[list[float]]:
         client = self._get_client()
-        # Retry only on specific RateLimitError implicitly handled by Tenacity if we specified retry_if_exception_type, 
+        # Retry only on specific RateLimitError implicitly handled by Tenacity if we specified retry_if_exception_type,
         # but to avoid import errors at module load, we retry generally for OpenAI API failures that bubble up.
         response = client.embeddings.create(
             input=input_data,
@@ -43,7 +45,7 @@ class OpenAIEmbedder(BaseEmbedder):
         vectors = self._call_api_with_retry([text])
         return EmbeddingDTO(vector=vectors[0], dimension=len(vectors[0]))
 
-    def embed_batch(self, texts: List[str]) -> List[EmbeddingDTO]:
+    def embed_batch(self, texts: list[str]) -> list[EmbeddingDTO]:
         if not texts:
             return []
         vectors = self._call_api_with_retry(texts)

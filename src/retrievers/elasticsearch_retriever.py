@@ -16,10 +16,9 @@ Elasticsearch as the vector store.  The implementation supports two modes:
 
 from __future__ import annotations
 
-import os
 import time
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -61,7 +60,7 @@ class ElasticSearchRetriever(Retriever):
         self._embedder = embedder
         self._client: Any | None = None  # Elasticsearch client when real mode
         # In‑memory mock storage: id -> (vector, Chunk)
-        self._store: Dict[str, tuple[np.ndarray, Chunk]] = {}
+        self._store: dict[str, tuple[np.ndarray, Chunk]] = {}
 
     # ---------------------------------------------------------------------
     # Lazy client handling
@@ -106,7 +105,7 @@ class ElasticSearchRetriever(Retriever):
     # ---------------------------------------------------------------------
     # Helper conversion methods
     # ---------------------------------------------------------------------
-    def _chunk_to_doc(self, chunk: Chunk) -> Dict[str, Any]:
+    def _chunk_to_doc(self, chunk: Chunk) -> dict[str, Any]:
         """Serialize a :class:`Chunk` to a JSON document suitable for ES.
 
         The mapping used in ``_ensure_index`` stores the embedding in a
@@ -126,7 +125,7 @@ class ElasticSearchRetriever(Retriever):
             # floats.
         }
 
-    def _doc_to_chunk(self, doc: Dict[str, Any]) -> Chunk:
+    def _doc_to_chunk(self, doc: dict[str, Any]) -> Chunk:
         """Re‑create a :class:`Chunk` from an ES document.
         """
         meta = ChunkMetadata(
@@ -197,7 +196,7 @@ class ElasticSearchRetriever(Retriever):
         # Real Elasticsearch path ------------------------------------------------
         self._ensure_index()
         client = self._get_client()
-        actions: List[Dict[str, Any]] = []
+        actions: list[dict[str, Any]] = []
         for chunk, emb in zip(chunks, embeddings):
             doc = self._chunk_to_doc(chunk)
             doc["embedding"] = list(emb.vector)
@@ -234,7 +233,7 @@ class ElasticSearchRetriever(Retriever):
             if q_norm == 0:
                 raise ValueError("Query embedding has zero magnitude.")
             q_vec = q_vec / q_norm
-            scores_chunks: List[tuple[float, Chunk]] = []
+            scores_chunks: list[tuple[float, Chunk]] = []
             for vec, chunk in self._store.values():
                 # Cosine similarity = dot product of normalized vectors.
                 c_norm = np.linalg.norm(vec)
@@ -244,7 +243,7 @@ class ElasticSearchRetriever(Retriever):
                 scores_chunks.append((sim, chunk))
             scores_chunks.sort(key=lambda x: x[0], reverse=True)
             top = scores_chunks[:top_k]
-            retrieved: List[RetrievedChunk] = []
+            retrieved: list[RetrievedChunk] = []
             for rank, (score, chunk) in enumerate(top):
                 retrieved.append(RetrievedChunk(chunk=chunk, score=score, rank=rank))
             metadata = {
@@ -273,7 +272,7 @@ class ElasticSearchRetriever(Retriever):
         resp = client.search(index=self._config.index_name, body=knn_query)
         latency = time.time() - start
         hits = resp.get("hits", {}).get("hits", [])
-        retrieved: List[RetrievedChunk] = []
+        retrieved: list[RetrievedChunk] = []
         for rank, hit in enumerate(hits):
             source = hit["_source"]
             chunk = self._doc_to_chunk(source)

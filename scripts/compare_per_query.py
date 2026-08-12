@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import sys
 
 
 def compare_results(file1_path: str, file2_path: str) -> None:

@@ -1,8 +1,9 @@
 import logging
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from rq import Queue, Retry
+
 from src.core.types import Document
 
 from .config import QueueConfig
@@ -21,13 +22,13 @@ class IngestionProducer:
 
     def enqueue_documents(
         self,
-        documents: List[Union[Document, IngestionDocumentDTO]],
+        documents: list[Document | IngestionDocumentDTO],
         chunker_name: str,
         embedder_name: str,
-        chunker_params: Dict[str, Any] | None = None,
-        embedder_params: Dict[str, Any] | None = None,
+        chunker_params: dict[str, Any] | None = None,
+        embedder_params: dict[str, Any] | None = None,
         batch_size: int = 500
-    ) -> List[str]:
+    ) -> list[str]:
         """Convert documents to DTOs, batch them, and enqueue to RQ.
 
         Args:
@@ -43,8 +44,8 @@ class IngestionProducer:
         """
         chunker_params = chunker_params or {}
         embedder_params = embedder_params or {}
-        
-        dto_documents: List[IngestionDocumentDTO] = []
+
+        dto_documents: list[IngestionDocumentDTO] = []
         for doc in documents:
             if isinstance(doc, Document):
                 metadata_dict = {}
@@ -68,12 +69,12 @@ class IngestionProducer:
             else:
                 raise TypeError("Documents must be of type src.core.types.Document or IngestionDocumentDTO")
 
-        job_ids: List[str] = []
-        
+        job_ids: list[str] = []
+
         for i in range(0, len(dto_documents), batch_size):
             batch_docs = dto_documents[i:i + batch_size]
             batch_id = str(uuid.uuid4())
-            
+
             batch_dto = IngestionBatchDTO(
                 batch_id=batch_id,
                 documents=batch_docs,
@@ -82,17 +83,17 @@ class IngestionProducer:
                 embedder_name=embedder_name,
                 embedder_params=embedder_params
             )
-            
+
             retry_config = Retry(max=self.config.max_retries, interval=self.config.retry_delay)
-            
+
             job = self.queue.enqueue(
                 process_batch,
                 batch_dto,
                 retry=retry_config,
                 job_id=f"ingest_batch_{batch_id}"
             )
-            
+
             job_ids.append(job.id)
             logger.info(f"Enqueued batch {batch_id} (size={len(batch_docs)}) as Job ID: {job.id}")
-            
+
         return job_ids

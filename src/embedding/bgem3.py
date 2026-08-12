@@ -1,5 +1,6 @@
-from typing import List
+
 from .base import BaseEmbedder, EmbeddingDTO
+
 
 class BGEM3Embedder(BaseEmbedder):
     """Local embedding implementation using the BGE-m3 model via HuggingFace."""
@@ -12,7 +13,7 @@ class BGEM3Embedder(BaseEmbedder):
     def _ensure_model_loaded(self) -> None:
         if self._model is not None:
             return
-            
+
         try:
             from sentence_transformers import SentenceTransformer
             # Using BGE-M3 model natively with SentenceTransformers
@@ -28,11 +29,11 @@ class BGEM3Embedder(BaseEmbedder):
         vector = self._model.encode(text, normalize_embeddings=True).tolist()
         return EmbeddingDTO(vector=vector, dimension=len(vector))
 
-    def embed_batch(self, texts: List[str]) -> List[EmbeddingDTO]:
+    def embed_batch(self, texts: list[str]) -> list[EmbeddingDTO]:
         if not texts:
             return []
-            
+
         self._ensure_model_loaded()
         vectors = self._model.encode(texts, normalize_embeddings=True).tolist()
-        
+
         return [EmbeddingDTO(vector=vec, dimension=len(vec)) for vec in vectors]

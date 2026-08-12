@@ -159,18 +159,18 @@ class SQuADLoader(DatasetLoader):
         (crowd-sourced). SQuAD 2.0'da cevaplanamayan sorular için boş liste döner.
         """
         self._ensure_dataset_loaded()
-        
+
         gold_answers: dict[str, list[str]] = {}
-        
+
         try:
             for item in self._dataset:
                 query_id = str(item["id"])
                 answers = item.get("answers", {})
                 # SQuAD returns 'text' as a list of strings
                 text_list = answers.get("text", [])
-                
+
                 gold_answers[query_id] = [str(text) for text in text_list]
-                
+
             return gold_answers
         except Exception as e:
             raise RuntimeError(f"Error processing SQuAD gold answers: {e}") from e

@@ -26,7 +26,7 @@ def find_result_files() -> list[str]:
 
     def get_sort_key(filepath: str) -> str:
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
                 if "timestamp" in data:
                     return str(data["timestamp"])
@@ -41,7 +41,7 @@ def find_result_files() -> list[str]:
 
 
 def load_json(filepath: str) -> dict[str, Any]:
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         return json.load(f)
 
 

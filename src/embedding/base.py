@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, Sequence
+
 
 @dataclass(frozen=True)
 class EmbeddingDTO:
@@ -10,7 +11,7 @@ class EmbeddingDTO:
 
 class BaseEmbedder(ABC):
     """Abstract base class for all embedding models."""
-    
+
     @abstractmethod
     def embed_text(self, text: str) -> EmbeddingDTO:
         """
@@ -23,9 +24,9 @@ class BaseEmbedder(ABC):
             An EmbeddingDTO object containing the vector.
         """
         pass
-        
+
     @abstractmethod
-    def embed_batch(self, texts: List[str]) -> List[EmbeddingDTO]:
+    def embed_batch(self, texts: list[str]) -> list[EmbeddingDTO]:
         """
         Embeds a batch of text strings efficiently.
         

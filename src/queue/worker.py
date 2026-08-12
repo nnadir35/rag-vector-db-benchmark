@@ -28,7 +28,7 @@ def dlq_exception_handler(job, exc_type, exc_value, traceback) -> bool:
         True to continue propagation to other handlers (like RQ's FailedJobRegistry).
     """
     retries_left = getattr(job, "retries_left", None)
-    
+
     # Eğer henüz deneme hakkı varsa (retries_left > 0), RQ'nun kendi retry handler'ına bırakıyoruz
     if retries_left is not None and retries_left > 0:
         logger.warning(
@@ -40,7 +40,7 @@ def dlq_exception_handler(job, exc_type, exc_value, traceback) -> bool:
     # Deneme hakları bittiğinde veya retry konfigüre edilmediğinde DLQ'ya aktarıyoruz
     config = QueueConfig()
     connection = job.connection
-    
+
     error_payload = {
         "job_id": job.id,
         "origin_queue": job.origin,
@@ -50,7 +50,7 @@ def dlq_exception_handler(job, exc_type, exc_value, traceback) -> bool:
         "job_args": str(job.args) if job.args else [],
         "job_kwargs": str(job.kwargs) if job.kwargs else {}
     }
-    
+
     try:
         # DLQ olarak belirlenen Redis listesine (list) hata detaylarını yazıyoruz
         connection.rpush(config.dlq_name, json.dumps(error_payload))
@@ -60,27 +60,27 @@ def dlq_exception_handler(job, exc_type, exc_value, traceback) -> bool:
         )
     except Exception as dlq_err:
         logger.critical(f"Failed to write job {job.id} to DLQ: {dlq_err}", exc_info=True)
-        
+
     return True
 
 def run_worker() -> None:
     """Start the RQ worker with custom DLQ exception handler and configuration."""
     config = QueueConfig()
     redis_conn = config.get_redis_connection()
-    
+
     logger.info(f"Starting RQ Worker connecting to Redis at {config.redis_host}:{config.redis_port}")
     logger.info(f"Listening on queue: '{config.queue_name}'")
     logger.info(f"Dead Letter Queue (DLQ) configured as: '{config.dlq_name}' (Redis List)")
-    
+
     queue = Queue(config.queue_name, connection=redis_conn)
-    
+
     # Worker initialization with custom DLQ handler
     worker = Worker(
         [queue],
         connection=redis_conn,
         exception_handlers=[dlq_exception_handler]
     )
-    
+
     try:
         # RQ sinyalleri (SIGINT/SIGTERM) yakalayarak Graceful Shutdown'ı otomatik olarak yönetir.
         # İlk sinyalde yeni iş kabul etmeyi durdurup elindeki işi bitirir.

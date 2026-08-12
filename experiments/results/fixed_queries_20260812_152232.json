@@ -1,0 +1,17 @@
+{
+  "query_ids": [
+    "5ad3a266604f3c001a3fea27",
+    "5ad3dbc6604f3c001a3ff3ec",
+    "56de10b44396321400ee2593",
+    "5ad3e96b604f3c001a3ff68b",
+    "56de15104396321400ee25b8",
+    "56de17f9cffd8e1900b4b5e1",
+    "56de3d594396321400ee26cb",
+    "56de3ebc4396321400ee26e8",
+    "56e19724cd28a01900c679f6",
+    "5ad541ad5b96ef001a10abed"
+  ],
+  "num_queries": 10,
+  "source_num_documents": 50,
+  "timestamp": "20260812_152232"
+}

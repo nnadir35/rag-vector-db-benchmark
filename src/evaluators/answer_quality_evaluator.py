@@ -38,7 +38,7 @@ class AnswerQualityEvaluator(Evaluator):
         """
         em = exact_match_score(result.response, ground_truth)
         f1 = f1_score(result.response, ground_truth)
-        
+
         return {
             "exact_match": em,
             "f1": f1

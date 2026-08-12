@@ -1,5 +1,7 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from .base import BaseChunker, ChunkDTO
+
 
 class SemanticChunker(BaseChunker):
     """Chunks text preserving semantic boundaries like sentences.
@@ -25,12 +27,12 @@ class SemanticChunker(BaseChunker):
                 "SemanticChunker requires nltk. Please install it using: uv add nltk"
             ) from e
 
-    def chunk_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> List[ChunkDTO]:
+    def chunk_text(self, text: str, metadata: dict[str, Any] | None = None) -> list[ChunkDTO]:
         from nltk.tokenize import sent_tokenize
-        
+
         base_metadata = metadata or {}
         sentences = sent_tokenize(text, language=self.language)
-        
+
         return [
             ChunkDTO(
                 content=sentence.strip(),

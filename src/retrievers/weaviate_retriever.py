@@ -11,10 +11,9 @@ Weaviate as the vector store. The implementation supports two modes:
 
 from __future__ import annotations
 
-import os
 import time
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -55,7 +54,7 @@ class WeaviateRetriever(Retriever):
         self._client: Any | None = None
         self._collection: Any | None = None
         # In‑memory mock storage: id -> (vector, Chunk)
-        self._store: Dict[str, tuple[np.ndarray, Chunk]] = {}
+        self._store: dict[str, tuple[np.ndarray, Chunk]] = {}
 
     def _ensure_weaviate_imported(self) -> None:
         """Import ``weaviate`` lazily when required."""
@@ -131,7 +130,7 @@ class WeaviateRetriever(Retriever):
                 vec = np.asarray(emb.vector, dtype=np.float32)
                 self._store[chunk.id] = (vec, chunk)
             return
-            
+
         self._ensure_collection()
         with self._collection.batch.dynamic() as batch:
             for chunk, emb in zip(chunks, embeddings):
@@ -169,7 +168,7 @@ class WeaviateRetriever(Retriever):
             if q_norm == 0:
                 raise ValueError("Query embedding has zero magnitude.")
             q_vec = q_vec / q_norm
-            scores_chunks: List[tuple[float, Chunk]] = []
+            scores_chunks: list[tuple[float, Chunk]] = []
             for vec, chunk in self._store.values():
                 c_norm = np.linalg.norm(vec)
                 if c_norm == 0:
@@ -178,7 +177,7 @@ class WeaviateRetriever(Retriever):
                 scores_chunks.append((sim, chunk))
             scores_chunks.sort(key=lambda x: x[0], reverse=True)
             top = scores_chunks[:top_k]
-            retrieved: List[RetrievedChunk] = []
+            retrieved: list[RetrievedChunk] = []
             for rank, (score, chunk) in enumerate(top):
                 retrieved.append(RetrievedChunk(chunk=chunk, score=score, rank=rank))
             metadata = {
@@ -192,7 +191,7 @@ class WeaviateRetriever(Retriever):
 
         self._ensure_collection()
         start = time.time()
-        
+
         response = self._collection.query.near_vector(
             near_vector=list(query_embedding.vector),
             limit=top_k,
@@ -200,8 +199,8 @@ class WeaviateRetriever(Retriever):
             return_properties=["chunk_id", "content", "document_id", "chunk_index", "start_char", "end_char"]
         )
         latency = time.time() - start
-        
-        retrieved: List[RetrievedChunk] = []
+
+        retrieved: list[RetrievedChunk] = []
         for rank, obj in enumerate(response.objects):
             props = obj.properties
             meta = ChunkMetadata(
@@ -216,7 +215,7 @@ class WeaviateRetriever(Retriever):
             # Convert distance to similarity score
             score = 1.0 - dist
             retrieved.append(RetrievedChunk(chunk=chunk, score=score, rank=rank))
-            
+
         metadata = {
             "retrieval_latency_seconds": latency,
             "num_results": len(retrieved),

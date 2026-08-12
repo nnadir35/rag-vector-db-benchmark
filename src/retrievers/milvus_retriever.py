@@ -220,7 +220,7 @@ class MilvusRetriever(Retriever):
             if hasattr(client, "flush"):
                 client.flush(collection_name=self._config.collection_name)
             client.load_collection(collection_name=self._config.collection_name)
-            
+
             self._next_id += len(chunks)
             self._collection_ready = True
 
