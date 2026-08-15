@@ -189,7 +189,7 @@ class ElasticSearchRetriever(Retriever):
         if not chunks:
             return
         if self._config.in_memory:
-            for chunk, emb in zip(chunks, embeddings):
+            for chunk, emb in zip(chunks, embeddings, strict=False):
                 vec = np.asarray(emb.vector, dtype=np.float32)
                 self._store[chunk.id] = (vec, chunk)
             return
@@ -197,7 +197,7 @@ class ElasticSearchRetriever(Retriever):
         self._ensure_index()
         client = self._get_client()
         actions: list[dict[str, Any]] = []
-        for chunk, emb in zip(chunks, embeddings):
+        for chunk, emb in zip(chunks, embeddings, strict=False):
             doc = self._chunk_to_doc(chunk)
             doc["embedding"] = list(emb.vector)
             actions.append({"_index": self._config.index_name, "_source": doc})

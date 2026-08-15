@@ -64,7 +64,7 @@ def process_batch(batch: IngestionBatchDTO) -> ProcessedBatchResultDTO:
             chunk_contents = [c.content for c in chunks]
             embeddings = embedder.embed_batch(chunk_contents)
 
-            for idx, (chunk, emb_dto) in enumerate(zip(chunks, embeddings)):
+            for idx, (chunk, emb_dto) in enumerate(zip(chunks, embeddings, strict=False)):
                 chunk_id = f"{doc.id}_chunk_{chunk.metadata.get('chunk_index', idx)}"
                 processed_chunk = ProcessedChunkDTO(
                     id=chunk_id,

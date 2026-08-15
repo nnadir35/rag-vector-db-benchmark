@@ -17,13 +17,13 @@ logger = logging.getLogger("rq.worker")
 
 def dlq_exception_handler(job, exc_type, exc_value, traceback) -> bool:
     """Exception handler to route jobs that exhausted all retries to a Dead Letter Queue (DLQ).
-    
+
     Args:
         job: The failed RQ Job object.
         exc_type: The exception class.
         exc_value: The exception instance.
         traceback: The traceback object.
-        
+
     Returns:
         True to continue propagation to other handlers (like RQ's FailedJobRegistry).
     """

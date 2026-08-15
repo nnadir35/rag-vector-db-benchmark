@@ -211,8 +211,6 @@ class MilvusRetrieverConfig:
 
 # ElasticSearch retriever configuration
 
-from dataclasses import dataclass, field
-
 
 @dataclass(frozen=True)
 class ElasticSearchRetrieverConfig:

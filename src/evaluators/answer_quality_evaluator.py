@@ -28,11 +28,11 @@ class AnswerQualityEvaluator(Evaluator):
 
     def evaluate(self, result: RAGResponse, ground_truth: list[str]) -> dict[str, float]:
         """Compute exact match and F1 scores.
-        
+
         Args:
             result: The generation response containing the model's answer.
             ground_truth: o sorunun kabul edilebilir altın cevap metinleri listesi.
-        
+
         Returns:
             A dictionary with 'exact_match' and 'f1' float values.
         """

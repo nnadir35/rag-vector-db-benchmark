@@ -126,14 +126,14 @@ class WeaviateRetriever(Retriever):
         if not chunks:
             return
         if self._config.in_memory:
-            for chunk, emb in zip(chunks, embeddings):
+            for chunk, emb in zip(chunks, embeddings, strict=False):
                 vec = np.asarray(emb.vector, dtype=np.float32)
                 self._store[chunk.id] = (vec, chunk)
             return
 
         self._ensure_collection()
         with self._collection.batch.dynamic() as batch:
-            for chunk, emb in zip(chunks, embeddings):
+            for chunk, emb in zip(chunks, embeddings, strict=False):
                 meta = chunk.metadata
                 properties = {
                     "chunk_id": chunk.id,

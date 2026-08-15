@@ -18,6 +18,13 @@ from datetime import datetime
 # Add project root to PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 from src.chunkers.fixed_size_chunker import FixedSizeChunker
 from src.datasets import (
     DatasetLoader,

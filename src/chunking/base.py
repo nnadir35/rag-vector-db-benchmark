@@ -16,11 +16,11 @@ class BaseChunker(ABC):
     def chunk_text(self, text: str, metadata: dict[str, Any] | None = None) -> list[ChunkDTO]:
         """
         Splits text into chunks.
-        
+
         Args:
             text: The raw text to chunk.
             metadata: Optional metadata to attach to each chunk.
-            
+
         Returns:
             A list of ChunkDTO objects.
         """

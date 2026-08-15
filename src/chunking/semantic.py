@@ -5,7 +5,7 @@ from .base import BaseChunker, ChunkDTO
 
 class SemanticChunker(BaseChunker):
     """Chunks text preserving semantic boundaries like sentences.
-    
+
     Note: Requires 'nltk' to be installed via uv (uv add nltk).
     """
 

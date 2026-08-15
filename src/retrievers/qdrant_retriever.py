@@ -82,10 +82,13 @@ class QdrantRetriever(Retriever):
             try:
                 url = os.getenv("QDRANT_URL", "").strip()
                 host = os.getenv("QDRANT_HOST", "").strip()
+                port_str = os.getenv("QDRANT_PORT", "").strip()
                 if url:
+                    if port_str and ":6333" in url:
+                        url = url.replace(":6333", f":{port_str}")
                     self._client = QdrantClient(url=url)
                 elif host:
-                    port = int(os.getenv("QDRANT_PORT", "6333"))
+                    port = int(port_str) if port_str else 6333
                     self._client = QdrantClient(url=f"http://{host}:{port}")
                 elif self._config.in_memory:
                     self._client = QdrantClient(":memory:")

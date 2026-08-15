@@ -32,11 +32,11 @@ class UniversalGenerator(Generator):
         """Ensure litellm is installed and imported lazily."""
         try:
             import litellm  # noqa: F401
-        except ImportError:
+        except ImportError as err:
             raise ImportError(
                 "litellm package is required for UniversalGenerator. "
                 "Install it with: pip install litellm"
-            )
+            ) from err
 
     def _format_context(self, chunks: Sequence[RetrievedChunk]) -> str:
         """Format retrieved chunks into a context string."""

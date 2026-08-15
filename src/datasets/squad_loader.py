@@ -36,11 +36,11 @@ class SQuADLoader(DatasetLoader):
 
         try:
             from datasets import load_dataset
-        except ImportError:
+        except ImportError as err:
             raise ImportError(
                 "The 'datasets' package is required to load SQuAD. "
                 "Install it with: pip install datasets"
-            )
+            ) from err
 
         try:
             dataset = load_dataset(self._config.version, split=self._config.split)

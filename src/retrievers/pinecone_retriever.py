@@ -95,11 +95,11 @@ class PineconeRetriever(Retriever):
         if pinecone is None:
             try:
                 import pinecone
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     "pinecone package is required for PineconeRetriever. "
                     "Install it with: pip install pinecone-client or pip install pinecone"
-                )
+                ) from err
 
     @property
     def _pinecone_index(self) -> "pinecone.Index":

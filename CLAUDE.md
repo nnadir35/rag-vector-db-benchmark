@@ -20,7 +20,7 @@
 - **Datasets:** `src/datasets/` now supports both `SQuADLoader` and `MSMARCOLoader`. The default systematic benchmark config (`experiments/configs/benchmark_all_dbs.yaml`) uses MS MARCO passage from local TSV / TSV.GZ files with streaming reads.
 - **Config loader:** `src/utils/config_loader.py` → `build_component_configs()` parses YAML → dataclasses
 - **Benchmark script:** `scripts/benchmark_db.py` → `run_benchmark()` runs all 6 DBs, `main()` handles CLI + YAML
-- **Results:** `experiments/results/` — JSON files, do NOT read these into context. `official_*.json` at the top level are the citable results; `archive/` and `debug/` subfolders are not
+- **Results:** `experiments/results/` — contains clean official benchmark outputs (`official_scale_experiment_A_S*.json` and `fixed_queries_*.json`). Temporary/retry logs and throwaway test results are kept clean. Do NOT read large JSON result files directly into context.
 
 ### `in_memory` semantics differ per DB — do not conflate them
 - **ChromaDB, FAISS:** no `in_memory` option, always run for real

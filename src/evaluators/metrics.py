@@ -176,7 +176,7 @@ def f1_score(prediction: str, gold_answers: list[str]) -> float:
 
 def check_ocr_quality(text: str, language: str = "eng") -> dict:
     """OCR kalite kontrol fonksiyonu.
-    
+
     - Spaced-out character density: (\\b\\w\\s\\w\\s\\w\\b match count / total characters)
     - German special character ratio: (ä, ö, ü, ß count / total characters)
     - Flags if text is too short (< 50 chars).

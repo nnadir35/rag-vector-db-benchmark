@@ -16,6 +16,8 @@ rag-vector-db-benchmark/
 │   └── utils/
 ├── experiments/
 │   ├── configs/
+│   ├── data/
+│   ├── logs/
 │   └── results/
 ├── tests/
 ├── docs/
@@ -220,12 +222,9 @@ rag-vector-db-benchmark/
 **Responsibility**: Store immutable experiment results, metrics, and artifacts.
 
 **What belongs here**:
-- Experiment result files (metrics, logs, outputs), organized as:
-  - `official_*.json` at the top level — the official results referenced in the thesis/README.
-    Two naming conventions in use: `official_baseline_<db>_100q_topk10_<timestamp>.json`
-    (single-DB baseline) and `official_scale_<N>docs_..._<timestamp>.json` (scale series)
-  - `archive/` — superseded or historical runs kept for reference
-  - `debug/` — throwaway runs from development, not citable results
+- Experiment result files (metrics and benchmark json outputs):
+  - `official_scale_experiment_A_S*.json` — official scale series benchmark results (e.g. S1: 1K, S2: 10K, S3: 20K, S4: 50K documents).
+  - `fixed_queries_*.json` — fixed seed query sample mappings used across scale runs.
 - Result metadata and provenance information
 - Comparison reports
 - Visualization data

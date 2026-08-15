@@ -34,11 +34,11 @@ class SentenceTransformersEmbedder(Embedder):
         """Ensure sentence_transformers is installed and imported."""
         try:
             import sentence_transformers  # noqa: F401
-        except ImportError:
+        except ImportError as err:
             raise ImportError(
                 "sentence_transformers package is required for SentenceTransformersEmbedder. "
                 "Install it with: pip install sentence-transformers"
-            )
+            ) from err
 
     def _get_model(self) -> Any:
         """Get or lazily load the SentenceTransformer model.

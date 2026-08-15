@@ -53,11 +53,11 @@ class ChromaRetriever(Retriever):
         if chromadb is None:
             try:
                 import chromadb
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     "chromadb package is required for ChromaRetriever. "
                     "Install it with: pip install chromadb"
-                )
+                ) from err
 
     def _create_chroma_client(self) -> Any:
         """Build a Chroma client (hybrid: remote server vs local persistence).

@@ -41,6 +41,7 @@ __all__ = [
     "QdrantRetriever",
     "FAISSRetriever",
     "MilvusRetriever",
+    "ElasticSearchRetriever",
     "build_retriever_from_yaml",
     # Configuration
     "PineconeRetrieverConfig",
@@ -48,6 +49,7 @@ __all__ = [
     "QdrantRetrieverConfig",
     "FAISSRetrieverConfig",
     "MilvusRetrieverConfig",
+    "ElasticSearchRetrieverConfig",
     # Registry
     "RETRIEVER_REGISTRY",
     "register_retriever",

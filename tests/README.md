@@ -7,21 +7,32 @@ Bu dizin RAG benchmark framework'ün test dosyalarını içerir.
 ```
 tests/
 ├── conftest.py                    # Shared fixtures ve mock'lar
+├── test_api.py                    # FastAPI endpoint testleri
+├── chunkers/
+│   └── test_fixed_size_chunker.py # FixedSizeChunker testleri
 ├── datasets/
 │   ├── test_msmarco_loader.py     # MSMARCOLoader testleri
 │   └── test_squad_loader.py       # SQuADLoader testleri
+├── embedders/
+│   └── test_sentence_transformers_embedder.py # Embedder testleri
 ├── evaluators/
+│   ├── test_generation_evaluator.py # LLM-as-a-judge testleri
+│   └── test_metrics.py            # Retrieval metrik testleri
+├── generators/
+│   └── test_universal_generator.py # UniversalGenerator testleri
 ├── pipeline/
+│   └── test_rag_pipeline.py       # RAG Pipeline testleri
+├── queue/
+│   └── test_queue.py              # Task queue testleri
 ├── retrievers/
 │   ├── test_chroma_retriever.py   # ChromaRetriever testleri
-│   ├── test_elasticsearch_retriever.py # ElasticSearchRetriever testleri
 │   ├── test_faiss_retriever.py    # FAISSRetriever testleri
 │   ├── test_milvus_retriever.py   # MilvusRetriever testleri
 │   ├── test_pinecone_retriever.py # PineconeRetriever testleri
-│   ├── test_qdrant_retriever.py   # QdrantRetriever testleri (varsa)
 │   ├── test_registry.py           # Registry pattern testleri
 │   └── test_config.py             # Config class testleri
 └── utils/
+    └── test_config_loader.py      # Config loader testleri
 ```
 
 ## Test Çalıştırma
