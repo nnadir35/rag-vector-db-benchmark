@@ -200,8 +200,8 @@ rag-vector-db-benchmark/
 **What belongs here**:
 - Experiment configuration files (YAML). Current set in `experiments/configs/`:
   `baseline_chroma.yaml`, `baseline_qdrant.yaml`, `baseline_faiss.yaml`, `baseline_milvus.yaml`,
-  `baseline_elasticsearch.yaml`, `baseline_weaviate.yaml` (one per retriever, retrieval-only,
-  `top_k=10`), `baseline_ollama.yaml` / `baseline_ollama_separate_judge.yaml` (end-to-end),
+  `baseline_elasticsearch.yaml`, `baseline_weaviate.yaml` (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1),
+  `baseline_ollama.yaml` (end-to-end),
   `benchmark_all_dbs.yaml` (runs all 6 retrievers on MS MARCO passage via local TSV inputs),
   `docker_rag_api.yaml`
 - Configuration templates

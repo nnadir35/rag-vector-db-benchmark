@@ -112,14 +112,13 @@ combined run:
 
 | Config | Purpose |
 | --- | --- |
-| `baseline_chroma.yaml` | ChromaDB retriever |
-| `baseline_qdrant.yaml` | Qdrant retriever |
-| `baseline_faiss.yaml` | FAISS retriever |
-| `baseline_milvus.yaml` | Milvus retriever |
-| `baseline_elasticsearch.yaml` | ElasticSearch retriever |
-| `baseline_weaviate.yaml` | Weaviate retriever |
+| `baseline_chroma.yaml` | ChromaDB retriever (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1) |
+| `baseline_qdrant.yaml` | Qdrant retriever (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1) |
+| `baseline_faiss.yaml` | FAISS retriever (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1) |
+| `baseline_milvus.yaml` | Milvus retriever (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1) |
+| `baseline_elasticsearch.yaml` | ElasticSearch retriever (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1) |
+| `baseline_weaviate.yaml` | Weaviate retriever (historical / deprecated — SQuAD v2, bkz. DENEY-PLANI-V2.md Faz 1) |
 | `baseline_ollama.yaml` | End-to-end run with the Ollama generator |
-| `baseline_ollama_separate_judge.yaml` | Same, with a separate LLM used as judge |
 | `benchmark_all_dbs.yaml` | Runs all 6 retrievers on MS MARCO passage via local TSV inputs |
 | `docker_rag_api.yaml` | Config used by the Dockerized `api.py` service |
 
