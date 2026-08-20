@@ -316,7 +316,8 @@ class ChromaRetriever(Retriever):
         Chroma server from a prior run. Skipping the delete in that case silently
         accumulates/mismatches stale points across runs. ``delete_collection``
         raises ``NotFoundError`` when the collection does not exist, which is
-        swallowed here to keep ``clear()`` idempotent.
+        swallowed here to keep ``clear()`` idempotent. After calling ``delete_collection``,
+        polls server-side state to verify the collection is fully deleted.
         """
         self._ensure_chroma_imported()
         from chromadb.errors import NotFoundError
@@ -324,9 +325,38 @@ class ChromaRetriever(Retriever):
         try:
             if self._client is None:
                 self._client = self._create_chroma_client()
-            self._client.delete_collection(self._config.collection_name)
-        except NotFoundError:
-            pass
+            name = self._config.collection_name
+            try:
+                self._client.delete_collection(name)
+            except NotFoundError:
+                pass
+            except Exception as e:
+                err_msg = str(e).lower()
+                if "not found" in err_msg or "does not exist" in err_msg:
+                    pass
+                else:
+                    raise
+
+            # Polling to verify deletion
+            max_retries = 10
+            poll_interval = 0.3
+            for _ in range(max_retries):
+                try:
+                    self._client.get_collection(name)
+                except Exception:
+                    # Collection no longer exists!
+                    break
+                time.sleep(poll_interval)
+            else:
+                try:
+                    self._client.get_collection(name)
+                    raise RuntimeError(
+                        f"Collection '{name}' still exists after delete_collection call in ChromaDB (timeout)."
+                    )
+                except Exception as ex:
+                    if isinstance(ex, RuntimeError):
+                        raise ex
+
         except Exception as e:
             raise RuntimeError(f"Failed to clear ChromaDB: {e}") from e
         finally:

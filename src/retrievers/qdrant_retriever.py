@@ -124,8 +124,7 @@ class QdrantRetriever(Retriever):
         client = self._get_client()
         name = self._config.collection_name
 
-        collections = client.get_collections().collections
-        exists = any(c.name == name for c in collections)
+        exists = client.collection_exists(collection_name=name)
 
         if exists:
             info = client.get_collection(collection_name=name)
@@ -136,22 +135,45 @@ class QdrantRetriever(Retriever):
                 current_size = params_vectors.size
             if current_size != vector_size:
                 client.delete_collection(collection_name=name)
+                # Polling to confirm deletion before recreating
+                max_retries = 10
+                poll_interval = 0.3
+                for _ in range(max_retries):
+                    if not client.collection_exists(collection_name=name):
+                        break
+                    time.sleep(poll_interval)
                 exists = False
 
         if not exists:
             from qdrant_client.models import HnswConfigDiff
 
-            client.create_collection(
-                collection_name=name,
-                vectors_config=VectorParams(
-                    size=vector_size,
-                    distance=self._distance_to_qdrant(),
-                ),
-                hnsw_config=HnswConfigDiff(
-                    m=self._config.hnsw_m,
-                    ef_construct=self._config.hnsw_ef_construction,
-                ),
-            )
+            max_create_attempts = 5
+            for attempt in range(max_create_attempts):
+                try:
+                    client.create_collection(
+                        collection_name=name,
+                        vectors_config=VectorParams(
+                            size=vector_size,
+                            distance=self._distance_to_qdrant(),
+                        ),
+                        hnsw_config=HnswConfigDiff(
+                            m=self._config.hnsw_m,
+                            ef_construct=self._config.hnsw_ef_construction,
+                        ),
+                    )
+                    break
+                except Exception as e:
+                    err_msg = str(e).lower()
+                    if (
+                        "409" in err_msg or "already exists" in err_msg
+                    ) and attempt < max_create_attempts - 1:
+                        try:
+                            client.delete_collection(collection_name=name)
+                        except Exception:
+                            pass
+                        time.sleep(0.5)
+                    else:
+                        raise
 
         self._collection_ready = True
 
@@ -353,9 +375,28 @@ class QdrantRetriever(Retriever):
         persistent Qdrant server from a prior run. Skipping the delete in that case
         silently accumulates stale points across runs. ``delete_collection`` is a
         no-op (returns False, does not raise) when the collection does not exist.
+        After calling ``delete_collection``, polls server-side state to verify the
+        collection is fully deleted before returning.
         """
         try:
-            self._get_client().delete_collection(collection_name=self._config.collection_name)
+            client = self._get_client()
+            name = self._config.collection_name
+
+            client.delete_collection(collection_name=name)
+
+            # Polling to verify deletion
+            max_retries = 10
+            poll_interval = 0.3
+            for _ in range(max_retries):
+                if not client.collection_exists(collection_name=name):
+                    break
+                time.sleep(poll_interval)
+            else:
+                if client.collection_exists(collection_name=name):
+                    raise RuntimeError(
+                        f"Collection '{name}' still exists after delete_collection call in Qdrant (timeout)."
+                    )
+
             self._collection_ready = False
         except Exception as e:
             raise RuntimeError(f"Failed to clear Qdrant: {e}") from e
