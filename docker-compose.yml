@@ -26,13 +26,17 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
       POSTGRES_DB: ${POSTGRES_DB:-rag_benchmark}
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_admin} -d ${POSTGRES_DB:-rag_benchmark}"]
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-rag_admin} -d ${POSTGRES_DB:-rag_benchmark}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,13 +46,13 @@ services:
     container_name: redis_queue
     command: redis-server --appendonly yes
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,14 +64,14 @@ services:
     image: qdrant/qdrant:v1.13.6
     container_name: qdrant_db
     ports:
-      - "${QDRANT_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+      - '${QDRANT_PORT:-6333}:6333'
+      - '${QDRANT_GRPC_PORT:-6334}:6334'
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/6333"]
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/localhost/6333']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -79,13 +83,17 @@ services:
       - IS_PERSISTENT=TRUE
       - PERSIST_DIRECTORY=/chroma/chroma
     ports:
-      - "${CHROMA_PORT:-8000}:8000"
+      - '${CHROMA_PORT:-8000}:8000'
     volumes:
       - chroma_data:/chroma/chroma
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v2/heartbeat || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          'python3 -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/api/v2/heartbeat'')" || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -96,15 +104,16 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - 'ES_JAVA_OPTS=-Xms1g -Xmx1g'
     ports:
-      - "${ELASTIC_PORT:-9200}:9200"
+      - '${ELASTIC_PORT:-9200}:9200'
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test:
+        ['CMD-SHELL', 'curl -f http://localhost:9200/_cluster/health || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -126,7 +135,7 @@ services:
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD", "etcdctl", "endpoint", "health"]
+      test: ['CMD', 'etcdctl', 'endpoint', 'health']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -143,7 +152,7 @@ services:
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -151,13 +160,13 @@ services:
   milvus:
     image: milvusdb/milvus:v2.3.9
     container_name: milvus_db
-    command: ["milvus", "run", "standalone"]
+    command: ['milvus', 'run', 'standalone']
     environment:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
     ports:
-      - "${MILVUS_PORT:-19530}:19530"
-      - "${MILVUS_API_PORT:-9091}:9091"
+      - '${MILVUS_PORT:-19530}:19530'
+      - '${MILVUS_API_PORT:-9091}:9091'
     volumes:
       - milvus_data:/var/lib/milvus
     depends_on:
@@ -168,19 +177,19 @@ services:
     networks:
       - rag-benchmark-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9091/healthz']
       interval: 30s
       timeout: 10s
       retries: 3
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.27.0
     ports:
-      - "${WEAVIATE_PORT:-8080}:8080"
-      - "50051:50051"
+      - '${WEAVIATE_PORT:-8080}:8080'
+      - '50051:50051'
     environment:
       QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-      DEFAULT_VECTORIZER_MODULE: "none"
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
     networks:
       - rag-benchmark-net
