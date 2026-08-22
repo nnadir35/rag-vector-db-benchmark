@@ -847,13 +847,22 @@ def _docker_compose_image_versions() -> dict[str, Any]:
             text = f.read()
     except OSError:
         return {"images": None, "status": "docker_compose_not_found"}
+    def _resolve_env_placeholder(token: str) -> str:
+        """Resolve docker-compose's ``${VAR:-default}``/``${VAR}`` syntax against the
+        actual environment, so the recorded image tag reflects what really ran, not the
+        unexpanded template string."""
+        def _sub(m: re.Match[str]) -> str:
+            var_name, _, default = m.group(1).partition(":-")
+            return os.getenv(var_name, default)
+        return re.sub(r"\$\{([^}]+)\}", _sub, token)
+
     try:
         service_blocks = re.findall(r"^  (\w+):\s*\n((?:    .*\n?)*)", text, flags=re.MULTILINE)
         images: dict[str, str] = {}
         for service, block in service_blocks:
             m = re.search(r"image:\s*(\S+)", block)
             if m:
-                images[service] = m.group(1)
+                images[service] = _resolve_env_placeholder(m.group(1))
         return {"images": images, "status": "ok"}
     except (re.error, ValueError):
         return {"images": None, "status": "docker_compose_parse_failed"}
@@ -1049,9 +1058,17 @@ def run_benchmark(
         query_embedding_total_ms / len(bench_queries) if bench_queries else float("nan")
     )
 
-    # --- Docker container names for the 4 Dockerized DBs, resolved once and reused for
-    # both indexing and retrieval resource sampling (see run_with_resource_stats). None
-    # for Chroma/FAISS — they're in-process, scope stays "process" per design. ---
+    # --- Docker container names for the Dockerized DBs, resolved once and reused for
+    # both indexing and retrieval resource sampling (see run_with_resource_stats).
+    # FAISS is always in-process (no server, no container) — stays "process" scope.
+    # Chroma is in-process only when no CHROMA_HOST is configured; when CHROMA_HOST
+    # *is* set (as in the official Docker setup), it's a real server in a container
+    # and should get container-level measurement just like the other 4 — the same
+    # "chroma_in_docker" condition measure_disk_size_mb() already uses. ---
+    chroma_in_docker = bool(os.getenv("CHROMA_HOST", "").strip())
+    chroma_container = (
+        _find_container_name(_DOCKER_DB_PATHS["chroma"][0]) if chroma_in_docker else None
+    )
     qdrant_container = _find_container_name(_DOCKER_DB_PATHS["qdrant"][0])
     milvus_container = _find_container_name(_DOCKER_DB_PATHS["milvus"][0])
     elasticsearch_container = _find_container_name(_DOCKER_DB_PATHS["elasticsearch"][0])
@@ -1065,7 +1082,7 @@ def run_benchmark(
     def _chroma_index() -> None:
         chroma.add_chunks(chunks, embeddings)
 
-    _, chroma_index_stats = run_with_resource_stats(_chroma_index)
+    _, chroma_index_stats = run_with_resource_stats(_chroma_index, container_name=chroma_container)
     chroma_add_seconds = time.perf_counter() - t_idx0
 
     # --- Retrieval + accuracy (Chroma) ---
@@ -1081,6 +1098,7 @@ def run_benchmark(
         show_progress=show_progress,
         dump_per_query=dump_per_query,
         warmup_query_count=warmup_query_count,
+        container_name=chroma_container,
         query_embedding_total_ms=query_embedding_total_ms,
         query_embedding_latencies_ms=query_embedding_latencies_ms,
     )
