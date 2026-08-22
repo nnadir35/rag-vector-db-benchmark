@@ -74,6 +74,33 @@ def mrr(retrieved_ids: list[str], relevant_ids: list[str]) -> float:
     return 0.0
 
 
+def mrr_at_k(retrieved_ids: list[str], relevant_ids: list[str], k: int) -> float:
+    """Compute Mean Reciprocal Rank truncated at K.
+
+    Same as ``mrr`` but a hit ranked beyond ``k`` does not count (returns 0.0),
+    consistent with the other ``*_at_k`` cutoff metrics in this module.
+
+    Args:
+        retrieved_ids: List of retrieved item IDs, ordered by rank.
+        relevant_ids: List of ground truth relevant item IDs.
+        k: The rank cutoff.
+
+    Returns:
+        Reciprocal Rank score (0.0 to 1.0). Returns 0.0 if not found within the
+        top K, or if either list is empty, or k=0.
+    """
+    if not retrieved_ids or not relevant_ids or k <= 0:
+        return 0.0
+
+    relevant_set = set(relevant_ids)
+
+    for rank, item_id in enumerate(retrieved_ids[:k], 1):
+        if item_id in relevant_set:
+            return 1.0 / rank
+
+    return 0.0
+
+
 def ndcg_at_k(retrieved_ids: list[str], relevant_ids: list[str], k: int) -> float:
     """Compute Normalized Discounted Cumulative Gain at K.
 

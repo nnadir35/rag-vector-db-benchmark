@@ -1,0 +1,67 @@
+{
+  "s3_file": "official_scale_experiment_A_S3_20000docs_5db_topk10_20260805_151408.json",
+  "s3_chroma_facts": {
+    "num_documents": 20000,
+    "disk_size_mb": 0.0,
+    "disk_size_flag": "in_memory_no_disk",
+    "disk_size_error": null,
+    "disk_size_status": null,
+    "in_memory": true,
+    "persist_directory": null
+  },
+  "other_scale_chroma_facts": {
+    "official_scale_S5_100000docs_5db_topk10_100000docs_5db_topk10_20260820_152847.json": {
+      "num_documents": 100000,
+      "disk_size_mb": 1.0,
+      "disk_size_flag": null,
+      "disk_size_error": null,
+      "disk_size_status": null,
+      "in_memory": false,
+      "persist_directory": null
+    },
+    "official_scale_S6_200000docs_5db_topk10_200000docs_5db_topk10_20260820_163053.json": {
+      "num_documents": 200000,
+      "disk_size_mb": 1.0,
+      "disk_size_flag": null,
+      "disk_size_error": null,
+      "disk_size_status": null,
+      "in_memory": false,
+      "persist_directory": null
+    },
+    "official_scale_experiment_A_S1_1000docs_5db_topk10_20260803_123156.json": {
+      "num_documents": 1000,
+      "disk_size_mb": 1.0,
+      "disk_size_flag": null,
+      "disk_size_error": null,
+      "disk_size_status": null,
+      "in_memory": false,
+      "persist_directory": null
+    },
+    "official_scale_experiment_A_S2_10000docs_5db_topk10_20260803_123807.json": {
+      "num_documents": 10000,
+      "disk_size_mb": 1.0,
+      "disk_size_flag": null,
+      "disk_size_error": null,
+      "disk_size_status": null,
+      "in_memory": false,
+      "persist_directory": null
+    },
+    "official_scale_experiment_A_S4_50000docs_5db_topk10_20260814_154710.json": {
+      "num_documents": 50000,
+      "disk_size_mb": 1.0,
+      "disk_size_flag": null,
+      "disk_size_error": null,
+      "disk_size_status": null,
+      "in_memory": false,
+      "persist_directory": null
+    }
+  },
+  "automated_check_inconsistencies": [
+    "S3 chroma in_memory=True differs from other scales ([False]).",
+    "S3 (20,000 docs) reports disk_size_mb_chroma=0.0 (suspiciously low/zero), while other scales report: [(1000, 1.0), (10000, 1.0), (50000, 1.0), (100000, 1.0), (200000, 1.0)].",
+    "S3 chroma disk_size_flag='in_memory_no_disk' but other scales report a real persisted disk size — Chroma's persist configuration is inconsistent across scales."
+  ],
+  "automated_check_requires_rerun": true,
+  "requires_rerun": true,
+  "requires_rerun_reason": "Confirmed by explicit direction, independent of the automated heuristic above. Automated check also found inconsistencies: S3 chroma in_memory=True differs from other scales ([False]).; S3 (20,000 docs) reports disk_size_mb_chroma=0.0 (suspiciously low/zero), while other scales report: [(1000, 1.0), (10000, 1.0), (50000, 1.0), (100000, 1.0), (200000, 1.0)].; S3 chroma disk_size_flag='in_memory_no_disk' but other scales report a real persisted disk size — Chroma's persist configuration is inconsistent across scales."
+}

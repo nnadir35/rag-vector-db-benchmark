@@ -10,16 +10,18 @@ Requires docker-compose up elasticsearch if in_memory=false for ES.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
+import platform
 import re
 import subprocess
 import sys
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from typing import Any, TypeVar
 
@@ -79,10 +81,25 @@ T = TypeVar("T")
 
 @dataclass(frozen=True)
 class ResourceStats:
-    """Peak resident set size (MB) and mean sampled CPU usage (%) for an interval."""
+    """Peak resident set size (MB) and mean sampled CPU usage (%) for an interval.
+
+    ``peak_memory_mb``/``avg_cpu_percent`` are always the benchmark **process's own**
+    (client-side) figures, measured via psutil — kept for backward compatibility with
+    existing consumers. When ``container_name`` is supplied to ``run_with_resource_stats``,
+    the DB's own Docker container is *additionally* sampled concurrently via `docker stats`;
+    its figures live in the ``container_*`` fields below, with
+    ``resource_measurement_scope`` indicating which one is authoritative for the DB
+    actually being measured ("container" for Dockerized DBs, "process" for in-process
+    DBs like Chroma/FAISS). A container that cannot be measured reports ``None`` values
+    with a ``container_status`` explaining why — never a silent ``0.0``.
+    """
 
     peak_memory_mb: float
     avg_cpu_percent: float
+    resource_measurement_scope: str = "process"
+    container_peak_memory_mb: float | None = None
+    container_avg_cpu_percent: float | None = None
+    container_status: str | None = None
 
 
 class ResourceSampler:
@@ -137,15 +154,141 @@ class ResourceSampler:
         return ResourceStats(peak_memory_mb=peak_mb, avg_cpu_percent=avg_cpu)
 
 
-def run_with_resource_stats(work: Callable[[], T], sampler_interval: float = 0.05) -> tuple[T, ResourceStats]:
-    """Run ``work`` while sampling memory/CPU in a background thread."""
+_MEM_UNIT_TO_MB: dict[str, float] = {
+    "B": 1e-6,
+    "KB": 1e-3,
+    "KIB": 1.0 / 1024.0,
+    "MB": 1.0,
+    "MIB": 1.0,
+    "GB": 1000.0,
+    "GIB": 1024.0,
+}
+
+
+def _parse_docker_mem_usage(token: str) -> float | None:
+    """Parse the used-side of `docker stats`'s MemUsage column, e.g. '123.4MiB / 2GiB' -> MB."""
+    used = token.split("/")[0].strip()
+    m = re.match(r"^([\d.]+)\s*([A-Za-z]+)$", used)
+    if not m:
+        return None
+    value, unit = float(m.group(1)), m.group(2).upper()
+    multiplier = _MEM_UNIT_TO_MB.get(unit)
+    if multiplier is None:
+        return None
+    return value * multiplier
+
+
+def _parse_docker_cpu_percent(token: str) -> float | None:
+    """Parse `docker stats`'s CPUPerc column, e.g. '12.34%' -> 12.34."""
+    m = re.match(r"^([\d.]+)\s*%$", token.strip())
+    if not m:
+        return None
+    return float(m.group(1))
+
+
+class DockerStatsSampler:
+    """Background sampler for a Docker container's own RAM/CPU via `docker stats`.
+
+    Polls `docker stats --no-stream` (a single-shot snapshot, since the streaming form
+    is awkward to bound in a background thread) at a bounded interval — `--no-stream`
+    itself takes on the order of 100-300ms, so the minimum interval is clamped higher
+    than the in-process ``ResourceSampler``. Never raises; any failure (container gone,
+    `docker` CLI missing, unparsable output) is recorded as a status string with `None`
+    values rather than a fabricated 0.0.
+    """
+
+    def __init__(self, container_name: str, interval_seconds: float = 0.3) -> None:
+        self._container = container_name
+        self._interval = max(0.2, float(interval_seconds))
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._mem_mb: list[float] = []
+        self._cpu_pct: list[float] = []
+        self._status: str | None = None
+
+    def start(self) -> None:
+        self._mem_mb.clear()
+        self._cpu_pct.clear()
+        self._status = None
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._loop, name="docker-stats-sampler", daemon=True)
+        self._thread.start()
+
+    def _sample_once(self) -> bool:
+        try:
+            proc = subprocess.run(
+                ["docker", "stats", "--no-stream", "--format", "{{.MemUsage}}\t{{.CPUPerc}}", self._container],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            self._status = "error"
+            return False
+        if proc.returncode != 0 or not proc.stdout.strip():
+            self._status = "unavailable"
+            return False
+        line = proc.stdout.strip().splitlines()[0]
+        parts = line.split("\t")
+        if len(parts) != 2:
+            self._status = "error"
+            return False
+        mem_mb = _parse_docker_mem_usage(parts[0])
+        cpu_pct = _parse_docker_cpu_percent(parts[1])
+        if mem_mb is None or cpu_pct is None:
+            self._status = "error"
+            return False
+        self._mem_mb.append(mem_mb)
+        self._cpu_pct.append(cpu_pct)
+        return True
+
+    def _loop(self) -> None:
+        while not self._stop.is_set():
+            self._sample_once()
+            if self._stop.wait(self._interval):
+                break
+
+    def stop(self) -> tuple[float | None, float | None, str | None]:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=15.0)
+            self._thread = None
+        if not self._mem_mb:
+            return None, None, (self._status or "unavailable")
+        return max(self._mem_mb), _mean(self._cpu_pct), "ok"
+
+
+def run_with_resource_stats(
+    work: Callable[[], T],
+    sampler_interval: float = 0.05,
+    container_name: str | None = None,
+) -> tuple[T, ResourceStats]:
+    """Run ``work`` while sampling memory/CPU in a background thread.
+
+    When ``container_name`` is given, also samples that Docker container's own RAM/CPU
+    concurrently (see ``DockerStatsSampler``) and reports it in the returned
+    ``ResourceStats``'s ``container_*`` fields with ``resource_measurement_scope``
+    set to ``"container"``. Passing ``None`` (the default) preserves the exact prior
+    behavior/return shape.
+    """
     sampler = ResourceSampler(interval_seconds=sampler_interval)
+    docker_sampler = DockerStatsSampler(container_name) if container_name else None
     sampler.start()
+    if docker_sampler is not None:
+        docker_sampler.start()
     try:
         result = work()
     finally:
-        stats = sampler.stop()
-    return result, stats
+        process_stats = sampler.stop()
+        if docker_sampler is not None:
+            container_mem, container_cpu, container_status = docker_sampler.stop()
+            process_stats = ResourceStats(
+                peak_memory_mb=process_stats.peak_memory_mb,
+                avg_cpu_percent=process_stats.avg_cpu_percent,
+                resource_measurement_scope="container",
+                container_peak_memory_mb=container_mem,
+                container_avg_cpu_percent=container_cpu,
+                container_status=container_status,
+            )
+    return result, process_stats
 
 
 def load_squad_corpus(
@@ -228,6 +371,17 @@ def _percentile(values: list[float], p: float) -> float:
 WARMUP_COUNT = 10
 
 
+def _rr_at_k(retrieved_ids: list[str], relevant_ids: list[str], k: int) -> float:
+    """Reciprocal-rank contribution of a single query, truncated at ``k`` (see mrr_at_k)."""
+    if not retrieved_ids or not relevant_ids or k <= 0:
+        return 0.0
+    relevant_set = set(relevant_ids)
+    for rank, item_id in enumerate(retrieved_ids[:k], 1):
+        if item_id in relevant_set:
+            return 1.0 / rank
+    return 0.0
+
+
 def _evaluate_with_repeats(
     *,
     name: str,
@@ -240,27 +394,47 @@ def _evaluate_with_repeats(
     num_repeats: int,
     show_progress: bool,
     dump_per_query: bool = False,
+    warmup_query_count: int = WARMUP_COUNT,
+    container_name: str | None = None,
+    query_embedding_total_ms: float = 0.0,
+    query_embedding_latencies_ms: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Run the retrieval pass for one DB ``num_repeats`` times.
 
     ``retrieve_fn`` takes a pre-computed query embedding (``retrieve_with_embedding``
     underneath) so the measured latency here is search-only — query embedding cost
     (constant, DB-independent) is measured once by the caller and reported separately.
+
+    Each repeat is split into a timed retrieval pass and an untimed scoring pass, so
+    ``evaluator.evaluate()`` overhead never leaks into any latency/QPS figure.
     """
     per_repeat_avg_ms: list[float] = []
     per_repeat_p50_ms: list[float] = []
     per_repeat_p95_ms: list[float] = []
+    per_repeat_p99_ms: list[float] = []
     per_repeat_metrics: list[dict[str, float]] = []
     per_query_details: list[dict[str, Any]] = []
+    query_level_results: list[dict[str, Any]] = []
+
+    per_repeat_wall_clock_qps: list[float] = []
+    per_repeat_service_time_qps: list[float] = []
+    per_repeat_wall_clock_qps_incl_embed: list[float] = []
+    per_repeat_service_time_qps_incl_embed: list[float] = []
+
+    have_embed_latencies = query_embedding_latencies_ms is not None
+    per_repeat_total_p50_ms: list[float] = []
+    per_repeat_total_p95_ms: list[float] = []
+    per_repeat_total_p99_ms: list[float] = []
 
     def _do_all_repeats() -> None:
-        warmup_queries = bench_queries[:WARMUP_COUNT] if len(bench_queries) >= WARMUP_COUNT else []
+        warmup_queries = bench_queries[:warmup_query_count] if len(bench_queries) >= warmup_query_count else []
         for repeat_idx in range(num_repeats):
             for q in warmup_queries:
                 retrieve_fn(query_embeddings[q.id], top_k, q.id)
 
-            latencies_ms: list[float] = []
-            rows: list[dict[str, float]] = []
+            # --- Pass 1: timed retrieval only, bracketed start-to-finish. ---
+            timed: list[tuple[Query, Any, float]] = []
+            t_wall0 = time.perf_counter()
             for q in tqdm(
                 bench_queries,
                 desc=f"{name} retrieval (repeat {repeat_idx + 1}/{num_repeats})",
@@ -271,36 +445,91 @@ def _evaluate_with_repeats(
                 t_r0 = time.perf_counter()
                 result = retrieve_fn(query_embeddings[q.id], top_k, q.id)
                 lat_ms = (time.perf_counter() - t_r0) * 1000.0
-                latencies_ms.append(lat_ms)
-                gt = set(ground_truth.get(q.id, set()))
-                rows.append(evaluator.evaluate(result, gt))
+                timed.append((q, result, lat_ms))
+            wall_elapsed_s = time.perf_counter() - t_wall0
+            latencies_ms = [lat for _, _, lat in timed]
 
-                if dump_per_query and repeat_idx == 0:
-                    retrieved_chunks_info = [
-                        {
-                            "chunk_id": rc.chunk.id,
-                            "doc_id": rc.chunk.id.split('_chunk_')[0] if '_chunk_' in rc.chunk.id else rc.chunk.id,
-                            "score": float(rc.score),
-                            "rank": rc.rank,
-                        }
+            # --- Pass 2: untimed scoring. ---
+            rows: list[dict[str, float]] = []
+            combined_latencies_ms: list[float] = []
+            for q, result, lat_ms in timed:
+                gt = set(ground_truth.get(q.id, set()))
+                m = evaluator.evaluate(result, gt)
+                rows.append(m)
+
+                if have_embed_latencies:
+                    embed_lat = query_embedding_latencies_ms.get(q.id, 0.0)  # type: ignore[union-attr]
+                    combined_latencies_ms.append(lat_ms + embed_lat)
+
+                if repeat_idx == 0:
+                    retrieved_ids = [
+                        rc.chunk.id.split("_chunk_")[0] if "_chunk_" in rc.chunk.id else rc.chunk.id
                         for rc in result.chunks
                     ]
-                    per_query_details.append({
+                    retrieved_ids = list(dict.fromkeys(retrieved_ids))
+                    query_level_results.append({
                         "query_id": q.id,
-                        "latency_ms": lat_ms,
-                        "retrieved": retrieved_chunks_info,
+                        f"recall@{top_k}": m.get(f"recall@{top_k}", float("nan")),
+                        "rr": _rr_at_k(retrieved_ids, list(gt), top_k),
+                        f"ndcg@{top_k}": m.get(f"ndcg@{top_k}", float("nan")),
                     })
+
+                    if dump_per_query:
+                        retrieved_chunks_info = [
+                            {
+                                "chunk_id": rc.chunk.id,
+                                "doc_id": rc.chunk.id.split('_chunk_')[0] if '_chunk_' in rc.chunk.id else rc.chunk.id,
+                                "score": float(rc.score),
+                                "rank": rc.rank,
+                            }
+                            for rc in result.chunks
+                        ]
+                        per_query_details.append({
+                            "query_id": q.id,
+                            "latency_ms": lat_ms,
+                            "retrieved": retrieved_chunks_info,
+                        })
 
             per_repeat_avg_ms.append(_mean(latencies_ms))
             per_repeat_p50_ms.append(_percentile(latencies_ms, 50))
             per_repeat_p95_ms.append(_percentile(latencies_ms, 95))
+            per_repeat_p99_ms.append(_percentile(latencies_ms, 99))
             per_repeat_metrics.append(_mean_metrics(rows))
 
-    _, resource_stats = run_with_resource_stats(_do_all_repeats)
+            n_q = len(bench_queries)
+            if wall_elapsed_s > 0:
+                per_repeat_wall_clock_qps.append(n_q / wall_elapsed_s)
+                per_repeat_wall_clock_qps_incl_embed.append(
+                    n_q / (wall_elapsed_s + query_embedding_total_ms / 1000.0)
+                )
+            service_time_s = sum(latencies_ms) / 1000.0
+            if service_time_s > 0:
+                per_repeat_service_time_qps.append(n_q / service_time_s)
+                per_repeat_service_time_qps_incl_embed.append(
+                    n_q / (service_time_s + query_embedding_total_ms / 1000.0)
+                )
+
+            if have_embed_latencies:
+                per_repeat_total_p50_ms.append(_percentile(combined_latencies_ms, 50))
+                per_repeat_total_p95_ms.append(_percentile(combined_latencies_ms, 95))
+                per_repeat_total_p99_ms.append(_percentile(combined_latencies_ms, 99))
+
+    _, resource_stats = run_with_resource_stats(_do_all_repeats, container_name=container_name)
 
     metric_keys = per_repeat_metrics[0].keys() if per_repeat_metrics else []
     metrics_mean = {k: float(np.mean([m[k] for m in per_repeat_metrics])) for k in metric_keys}
     metrics_std = {k: float(np.std([m[k] for m in per_repeat_metrics])) for k in metric_keys}
+
+    def _agg(values: list[float]) -> tuple[float, float]:
+        if not values:
+            return float("nan"), float("nan")
+        return float(np.mean(values)), float(np.std(values))
+
+    p99_mean, p99_std = _agg(per_repeat_p99_ms)
+    wc_qps_mean, wc_qps_std = _agg(per_repeat_wall_clock_qps)
+    st_qps_mean, st_qps_std = _agg(per_repeat_service_time_qps)
+    wc_qps_e_mean, wc_qps_e_std = _agg(per_repeat_wall_clock_qps_incl_embed)
+    st_qps_e_mean, st_qps_e_std = _agg(per_repeat_service_time_qps_incl_embed)
 
     res = {
         "resource_stats": resource_stats,
@@ -310,10 +539,31 @@ def _evaluate_with_repeats(
         "p50_ms_std": float(np.std(per_repeat_p50_ms)) if per_repeat_p50_ms else float("nan"),
         "p95_ms_mean": float(np.mean(per_repeat_p95_ms)) if per_repeat_p95_ms else float("nan"),
         "p95_ms_std": float(np.std(per_repeat_p95_ms)) if per_repeat_p95_ms else float("nan"),
+        "p99_ms_mean": p99_mean,
+        "p99_ms_std": p99_std,
+        "wall_clock_search_only_qps_mean": wc_qps_mean,
+        "wall_clock_search_only_qps_std": wc_qps_std,
+        "service_time_sum_qps_mean": st_qps_mean,
+        "service_time_sum_qps_std": st_qps_std,
+        "wall_clock_qps_incl_query_embedding_mean": wc_qps_e_mean,
+        "wall_clock_qps_incl_query_embedding_std": wc_qps_e_std,
+        "service_time_sum_qps_incl_query_embedding_mean": st_qps_e_mean,
+        "service_time_sum_qps_incl_query_embedding_std": st_qps_e_std,
         "metrics_mean": metrics_mean,
         "metrics_std": metrics_std,
         "num_repeats": num_repeats,
+        "query_level_results": query_level_results,
     }
+    if have_embed_latencies:
+        tp50_mean, tp50_std = _agg(per_repeat_total_p50_ms)
+        tp95_mean, tp95_std = _agg(per_repeat_total_p95_ms)
+        tp99_mean, tp99_std = _agg(per_repeat_total_p99_ms)
+        res["total_latency_p50_ms_mean"] = tp50_mean
+        res["total_latency_p50_ms_std"] = tp50_std
+        res["total_latency_p95_ms_mean"] = tp95_mean
+        res["total_latency_p95_ms_std"] = tp95_std
+        res["total_latency_p99_ms_mean"] = tp99_mean
+        res["total_latency_p99_ms_std"] = tp99_std
     if dump_per_query:
         res["per_query_details"] = per_query_details
     return res
@@ -573,6 +823,128 @@ def validate_effective_config(effective_cfg: dict[str, dict[str, Any]]) -> None:
         sys.stderr.write("!" * 80 + "\n\n")
 
 
+def _git_commit_hash() -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=10, check=False,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def _docker_compose_image_versions() -> dict[str, Any]:
+    """Best-effort parse of docker-compose.yml `image:` lines. Never fabricates a value."""
+    compose_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "docker-compose.yml"
+    )
+    try:
+        with open(compose_path, encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return {"images": None, "status": "docker_compose_not_found"}
+    try:
+        service_blocks = re.findall(r"^  (\w+):\s*\n((?:    .*\n?)*)", text, flags=re.MULTILINE)
+        images: dict[str, str] = {}
+        for service, block in service_blocks:
+            m = re.search(r"image:\s*(\S+)", block)
+            if m:
+                images[service] = m.group(1)
+        return {"images": images, "status": "ok"}
+    except (re.error, ValueError):
+        return {"images": None, "status": "docker_compose_parse_failed"}
+
+
+def build_reproducibility_metadata(
+    *,
+    dataset_config: SQuADDatasetConfig | MSMARCODatasetConfig,
+    splits_used: list[str],
+    num_documents: int,
+    num_chunks: int,
+    query_ids_used: list[str],
+    query_seed: int,
+    chunker_cfg: FixedSizeChunkerConfig,
+    embedder_cfg: SentenceTransformersEmbedderConfig,
+    embedding_dimension: int | None,
+    top_k: int,
+    effective_config: dict[str, dict[str, Any]],
+    retriever_cfgs: dict[str, Any],
+) -> dict[str, Any]:
+    """Assemble reproducibility metadata (item 10) for the result JSON.
+
+    Fully additive nested dict — never removes or overrides any existing top-level key.
+    """
+    dataset_name = "msmarco" if isinstance(dataset_config, MSMARCODatasetConfig) else "squad"
+    dataset_version = None if isinstance(dataset_config, MSMARCODatasetConfig) else dataset_config.version
+
+    fixed_query_ids_hash = hashlib.sha256(
+        ",".join(sorted(query_ids_used)).encode("utf-8")
+    ).hexdigest()
+
+    hnsw_params_per_db = {
+        db: {
+            "hnsw_m": cfg.get("hnsw_m"),
+            "hnsw_ef_construction": cfg.get("hnsw_ef_construction"),
+            "hnsw_ef_search": cfg.get("hnsw_ef_search"),
+            "num_candidates": cfg.get("num_candidates"),
+            "distance_metric": cfg.get("distance_metric"),
+        }
+        for db, cfg in effective_config.items()
+    }
+
+    try:
+        config_snapshot = {
+            "chunker": asdict(chunker_cfg),
+            "embedder": asdict(embedder_cfg),
+            "retrievers": {db: asdict(cfg) for db, cfg in retriever_cfgs.items()},
+            "top_k": top_k,
+        }
+        config_hash = hashlib.sha256(
+            json.dumps(config_snapshot, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()
+    except (TypeError, ValueError):
+        config_hash = None
+
+    try:
+        total_ram_bytes: int | None = int(psutil.virtual_memory().total)
+    except psutil.Error:
+        total_ram_bytes = None
+
+    return {
+        "dataset_name": dataset_name,
+        "dataset_version": dataset_version,
+        "splits_used": splits_used,
+        "num_documents": num_documents,
+        "num_chunks": num_chunks,
+        "fixed_query_ids_hash": fixed_query_ids_hash,
+        "query_seed": query_seed,
+        "chunker": {
+            "type": "FixedSizeChunker",
+            "chunk_size": chunker_cfg.chunk_size,
+            "overlap": chunker_cfg.overlap,
+        },
+        "embedding": {
+            "model_name": embedder_cfg.model_name,
+            "dimension": embedding_dimension,
+            "normalize_embeddings": embedder_cfg.normalize_embeddings,
+        },
+        "top_k": top_k,
+        "ann_params_per_db": hnsw_params_per_db,
+        "docker_compose": _docker_compose_image_versions(),
+        "hardware": {
+            "platform": platform.platform(),
+            "cpu_count": os.cpu_count(),
+            "total_ram_bytes": total_ram_bytes,
+        },
+        "git_commit": _git_commit_hash(),
+        "config_hash": config_hash,
+    }
+
+
 def run_benchmark(
     *,
     num_documents: int,
@@ -594,6 +966,7 @@ def run_benchmark(
     query_seed: int = 42,
     dump_per_query: bool = False,
     include_faiss: bool = False,
+    warmup_query_count: int = WARMUP_COUNT,
 ) -> dict[str, Any]:
     """Execute indexing and retrieval benchmarks; return a JSON-serializable report."""
 
@@ -665,14 +1038,24 @@ def run_benchmark(
     # not inflated by the ~constant embed_query() cost. ---
     logging.info("Embedding %s queries (single pass, shared by every DB)...", len(bench_queries))
     t_qe0 = time.perf_counter()
-    query_embeddings: dict[str, Embedding] = {
-        q.id: embedder.embed_query(q)
-        for q in tqdm(bench_queries, desc="Embedding queries", unit="q", disable=not show_progress)
-    }
+    query_embeddings: dict[str, Embedding] = {}
+    query_embedding_latencies_ms: dict[str, float] = {}
+    for q in tqdm(bench_queries, desc="Embedding queries", unit="q", disable=not show_progress):
+        t_q0 = time.perf_counter()
+        query_embeddings[q.id] = embedder.embed_query(q)
+        query_embedding_latencies_ms[q.id] = (time.perf_counter() - t_q0) * 1000.0
     query_embedding_total_ms = (time.perf_counter() - t_qe0) * 1000.0
     query_embedding_avg_ms = (
         query_embedding_total_ms / len(bench_queries) if bench_queries else float("nan")
     )
+
+    # --- Docker container names for the 4 Dockerized DBs, resolved once and reused for
+    # both indexing and retrieval resource sampling (see run_with_resource_stats). None
+    # for Chroma/FAISS — they're in-process, scope stays "process" per design. ---
+    qdrant_container = _find_container_name(_DOCKER_DB_PATHS["qdrant"][0])
+    milvus_container = _find_container_name(_DOCKER_DB_PATHS["milvus"][0])
+    elasticsearch_container = _find_container_name(_DOCKER_DB_PATHS["elasticsearch"][0])
+    weaviate_container = _find_container_name(_DOCKER_DB_PATHS["weaviate"][0])
 
     # --- Chroma: persist + resource stats ---
     chroma = ChromaRetriever(config=chroma_cfg, embedder=embedder)
@@ -697,6 +1080,9 @@ def run_benchmark(
         num_repeats=num_repeats,
         show_progress=show_progress,
         dump_per_query=dump_per_query,
+        warmup_query_count=warmup_query_count,
+        query_embedding_total_ms=query_embedding_total_ms,
+        query_embedding_latencies_ms=query_embedding_latencies_ms,
     )
     chroma_retrieval_stats = chroma_eval["resource_stats"]
     chroma_mean = chroma_eval["metrics_mean"]
@@ -711,7 +1097,7 @@ def run_benchmark(
     def _qdrant_index() -> None:
         qdrant.add_chunks(chunks, embeddings)
 
-    _, qdrant_index_stats = run_with_resource_stats(_qdrant_index)
+    _, qdrant_index_stats = run_with_resource_stats(_qdrant_index, container_name=qdrant_container)
     qdrant_add_seconds = time.perf_counter() - t_qidx0
 
     qdrant_eval = _evaluate_with_repeats(
@@ -725,6 +1111,10 @@ def run_benchmark(
         num_repeats=num_repeats,
         show_progress=show_progress,
         dump_per_query=dump_per_query,
+        warmup_query_count=warmup_query_count,
+        container_name=qdrant_container,
+        query_embedding_total_ms=query_embedding_total_ms,
+        query_embedding_latencies_ms=query_embedding_latencies_ms,
     )
     qdrant_retrieval_stats = qdrant_eval["resource_stats"]
     qdrant_mean = qdrant_eval["metrics_mean"]
@@ -765,6 +1155,9 @@ def run_benchmark(
             num_repeats=num_repeats,
             show_progress=show_progress,
             dump_per_query=dump_per_query,
+            warmup_query_count=warmup_query_count,
+            query_embedding_total_ms=query_embedding_total_ms,
+            query_embedding_latencies_ms=query_embedding_latencies_ms,
         )
         faiss_retrieval_stats = faiss_eval["resource_stats"]
         faiss_mean = faiss_eval["metrics_mean"]
@@ -779,7 +1172,7 @@ def run_benchmark(
     def _milvus_index() -> None:
         milvus.add_chunks(chunks, embeddings)
 
-    _, milvus_index_stats = run_with_resource_stats(_milvus_index)
+    _, milvus_index_stats = run_with_resource_stats(_milvus_index, container_name=milvus_container)
     milvus_add_seconds = time.perf_counter() - t_midx0
 
     # --- Retrieval + accuracy (Milvus) ---
@@ -794,6 +1187,10 @@ def run_benchmark(
         num_repeats=num_repeats,
         show_progress=show_progress,
         dump_per_query=dump_per_query,
+        warmup_query_count=warmup_query_count,
+        container_name=milvus_container,
+        query_embedding_total_ms=query_embedding_total_ms,
+        query_embedding_latencies_ms=query_embedding_latencies_ms,
     )
     milvus_retrieval_stats = milvus_eval["resource_stats"]
     milvus_mean = milvus_eval["metrics_mean"]
@@ -808,7 +1205,9 @@ def run_benchmark(
     def _elasticsearch_index() -> None:
         elasticsearch.add_chunks(chunks, embeddings)
 
-    _, elasticsearch_index_stats = run_with_resource_stats(_elasticsearch_index)
+    _, elasticsearch_index_stats = run_with_resource_stats(
+        _elasticsearch_index, container_name=elasticsearch_container
+    )
     elasticsearch_add_seconds = time.perf_counter() - t_esidx0
 
     # --- Retrieval + accuracy (ElasticSearch) ---
@@ -823,6 +1222,10 @@ def run_benchmark(
         num_repeats=num_repeats,
         show_progress=show_progress,
         dump_per_query=dump_per_query,
+        warmup_query_count=warmup_query_count,
+        container_name=elasticsearch_container,
+        query_embedding_total_ms=query_embedding_total_ms,
+        query_embedding_latencies_ms=query_embedding_latencies_ms,
     )
     elasticsearch_retrieval_stats = elasticsearch_eval["resource_stats"]
     elasticsearch_mean = elasticsearch_eval["metrics_mean"]
@@ -837,7 +1240,7 @@ def run_benchmark(
     def _weaviate_index() -> None:
         weaviate.add_chunks(chunks, embeddings)
 
-    _, weaviate_index_stats = run_with_resource_stats(_weaviate_index)
+    _, weaviate_index_stats = run_with_resource_stats(_weaviate_index, container_name=weaviate_container)
     weaviate_add_seconds = time.perf_counter() - t_widx0
 
     # --- Retrieval + accuracy (Weaviate) ---
@@ -852,6 +1255,10 @@ def run_benchmark(
         num_repeats=num_repeats,
         show_progress=show_progress,
         dump_per_query=dump_per_query,
+        warmup_query_count=warmup_query_count,
+        container_name=weaviate_container,
+        query_embedding_total_ms=query_embedding_total_ms,
+        query_embedding_latencies_ms=query_embedding_latencies_ms,
     )
     weaviate_retrieval_stats = weaviate_eval["resource_stats"]
     weaviate_mean = weaviate_eval["metrics_mean"]
@@ -1005,6 +1412,34 @@ def run_benchmark(
             "cpu_percent": round(weaviate_retrieval_stats.avg_cpu_percent, 2),
         },
     }
+
+    def _add_resource_scope_fields(
+        block: dict[str, Any], idx_stats: ResourceStats, ret_stats: ResourceStats
+    ) -> None:
+        """Additively record which measurement scope (process vs. container) backs each
+        figure, and the container's own RAM/CPU when available (item 8)."""
+        for phase, stats in (("indexing", idx_stats), ("retrieval", ret_stats)):
+            block[phase]["resource_measurement_scope"] = stats.resource_measurement_scope
+            block[phase]["container_memory_usage_mb"] = (
+                round(stats.container_peak_memory_mb, 3)
+                if stats.container_peak_memory_mb is not None else None
+            )
+            block[phase]["container_cpu_percent"] = (
+                round(stats.container_avg_cpu_percent, 2)
+                if stats.container_avg_cpu_percent is not None else None
+            )
+            block[phase]["container_status"] = stats.container_status
+
+    _add_resource_scope_fields(chroma_block, chroma_index_stats, chroma_retrieval_stats)
+    _add_resource_scope_fields(qdrant_block, qdrant_index_stats, qdrant_retrieval_stats)
+    if include_faiss:
+        assert faiss_block is not None and faiss_index_stats is not None
+        _add_resource_scope_fields(faiss_block, faiss_index_stats, faiss_retrieval_stats)
+    _add_resource_scope_fields(milvus_block, milvus_index_stats, milvus_retrieval_stats)
+    _add_resource_scope_fields(
+        elasticsearch_block, elasticsearch_index_stats, elasticsearch_retrieval_stats
+    )
+    _add_resource_scope_fields(weaviate_block, weaviate_index_stats, weaviate_retrieval_stats)
 
     effective_config = {
         "chroma": chroma.describe_index(),
@@ -1184,6 +1619,15 @@ def run_benchmark(
             ret_dict[f"disk_size_flag_{db_name}"] = info["disk_size_flag"]
         if "disk_io_write_mb" in info:
             ret_dict[f"disk_io_write_mb_{db_name}"] = info["disk_io_write_mb"]
+        # Normalized status (item 9): never masked to 0 — either a genuine in-memory-no-disk
+        # situation (checked first: that case's disk_size_mb is a placeholder 0.0, not a real
+        # measurement), a real measured MB figure ("ok"), or an explicit "error".
+        if info.get("disk_size_flag") == "in_memory_no_disk":
+            ret_dict[f"disk_size_status_{db_name}"] = "in_memory_no_disk"
+        elif info.get("disk_size_mb") is not None:
+            ret_dict[f"disk_size_status_{db_name}"] = "ok"
+        else:
+            ret_dict[f"disk_size_status_{db_name}"] = "error"
 
     if dump_per_query:
         ret_dict["per_query_details_chroma"] = chroma_eval["per_query_details"]
@@ -1194,6 +1638,87 @@ def run_benchmark(
         if include_faiss:
             assert faiss_eval is not None
             ret_dict["per_query_details_faiss"] = faiss_eval["per_query_details"]
+
+    # --- Additive: p99 / correct combined-latency percentiles / QPS / indexing
+    # throughput / always-on query-level results, for every DB, without repeating
+    # per-DB extraction logic (items 1, 2, 3, part of 5). ---
+    db_evals: dict[str, dict[str, Any]] = {
+        "chroma": chroma_eval,
+        "qdrant": qdrant_eval,
+        "milvus": milvus_eval,
+        "elasticsearch": elasticsearch_eval,
+        "weaviate": weaviate_eval,
+    }
+    db_add_seconds: dict[str, float] = {
+        "chroma": chroma_add_seconds,
+        "qdrant": qdrant_add_seconds,
+        "milvus": milvus_add_seconds,
+        "elasticsearch": elasticsearch_add_seconds,
+        "weaviate": weaviate_add_seconds,
+    }
+    if include_faiss:
+        assert faiss_eval is not None
+        db_evals["faiss"] = faiss_eval
+        db_add_seconds["faiss"] = faiss_add_seconds
+
+    for db_name, ev in db_evals.items():
+        ret_dict[f"search_only_p99_ms_{db_name}"] = ev["p99_ms_mean"]
+        ret_dict[f"search_only_p99_ms_std_{db_name}"] = ev["p99_ms_std"]
+        # NOTE: deliberately no "retrieval_p99_ms_{db} = search_p99 + avg_embedding" field.
+        # That pattern (kept only for the pre-existing legacy avg/p50/p95 fields, for
+        # backward compat) is not statistically valid for a percentile. The correct
+        # embed+search total percentile is computed below from the real per-query
+        # combined distribution instead.
+        for stat in ("p50", "p95", "p99"):
+            ret_dict[f"total_latency_{stat}_ms_mean_{db_name}"] = ev.get(f"total_latency_{stat}_ms_mean")
+            ret_dict[f"total_latency_{stat}_ms_std_{db_name}"] = ev.get(f"total_latency_{stat}_ms_std")
+        ret_dict[f"wall_clock_search_only_qps_mean_{db_name}"] = ev["wall_clock_search_only_qps_mean"]
+        ret_dict[f"wall_clock_search_only_qps_std_{db_name}"] = ev["wall_clock_search_only_qps_std"]
+        ret_dict[f"service_time_sum_qps_mean_{db_name}"] = ev["service_time_sum_qps_mean"]
+        ret_dict[f"service_time_sum_qps_std_{db_name}"] = ev["service_time_sum_qps_std"]
+        ret_dict[f"wall_clock_qps_incl_query_embedding_mean_{db_name}"] = (
+            ev["wall_clock_qps_incl_query_embedding_mean"]
+        )
+        ret_dict[f"wall_clock_qps_incl_query_embedding_std_{db_name}"] = (
+            ev["wall_clock_qps_incl_query_embedding_std"]
+        )
+        ret_dict[f"service_time_sum_qps_incl_query_embedding_mean_{db_name}"] = (
+            ev["service_time_sum_qps_incl_query_embedding_mean"]
+        )
+        ret_dict[f"service_time_sum_qps_incl_query_embedding_std_{db_name}"] = (
+            ev["service_time_sum_qps_incl_query_embedding_std"]
+        )
+
+        add_s = db_add_seconds[db_name]
+        ret_dict[f"add_vectors_per_second_{db_name}"] = (len(chunks) / add_s) if add_s > 0 else None
+        total_s = embedding_seconds + add_s
+        ret_dict[f"total_indexing_vectors_per_second_{db_name}"] = (
+            (len(chunks) / total_s) if total_s > 0 else None
+        )
+        ret_dict[f"query_level_results_{db_name}"] = ev["query_level_results"]
+
+    ret_dict["warmup_query_count"] = warmup_query_count
+    ret_dict["reproducibility"] = build_reproducibility_metadata(
+        dataset_config=dataset_config,
+        splits_used=splits_used,
+        num_documents=len(documents),
+        num_chunks=len(chunks),
+        query_ids_used=ret_dict["query_ids_used"],
+        query_seed=query_seed,
+        chunker_cfg=chunker_cfg,
+        embedder_cfg=embedder_cfg,
+        embedding_dimension=embeddings[0].dimension if embeddings else None,
+        top_k=top_k,
+        effective_config=effective_config,
+        retriever_cfgs={
+            "chroma": chroma_cfg,
+            "qdrant": qdrant_cfg,
+            "milvus": milvus_cfg,
+            "elasticsearch": elasticsearch_cfg,
+            "weaviate": weaviate_cfg,
+            **({"faiss": faiss_cfg} if include_faiss else {}),
+        },
+    )
     return ret_dict
 
 
@@ -1248,6 +1773,12 @@ def _print_table(report: dict[str, Any]) -> None:
                 res[db_name] = report.get(f"retrieval_p95_ms_{key}", 0.0)
             elif metric_type == "search_only_p50":
                 res[db_name] = report.get(f"search_only_p50_ms_{key}", 0.0)
+            elif metric_type == "search_only_p99":
+                res[db_name] = report.get(f"search_only_p99_ms_{key}", 0.0)
+            elif metric_type == "qps_search_only":
+                res[db_name] = report.get(f"wall_clock_search_only_qps_mean_{key}", 0.0)
+            elif metric_type == "add_vectors_per_second":
+                res[db_name] = report.get(f"add_vectors_per_second_{key}", 0.0)
             elif metric_type == "ret_mem":
                 block = report.get(key, {})
                 res[db_name] = block.get("retrieval", {}).get("memory_usage_mb", 0.0) if block else 0.0
@@ -1311,11 +1842,14 @@ def _print_table(report: dict[str, Any]) -> None:
     print(format_row("İndeksleme: peak RAM (RSS) [MB]", get_val("idx_mem", ""), fmt=".3f", higher_is_better=False))
     print(format_row("İndeksleme: ort. CPU [%]", get_val("idx_cpu", ""), fmt=".2f", higher_is_better=False))
     print(format_row("İndeksleme: toplam (embedding + bu DB) [s]", get_val("idx_total", ""), fmt=".3f", higher_is_better=False))
+    print(format_row("İndeksleme: vektör/s (add_chunks)", get_val("add_vectors_per_second", ""), fmt=".1f", higher_is_better=True))
 
     print(format_row("Ortalama retrieval [ms] (sorgu embed + arama)", get_val("ret_avg", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p50 retrieval latency [ms]", get_val("ret_p50", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p50 search-only latency [ms] (embed hariç)", get_val("search_only_p50", ""), fmt=".2f", higher_is_better=False))
     print(format_row("p95 retrieval latency [ms]", get_val("ret_p95", ""), fmt=".2f", higher_is_better=False))
+    print(format_row("p99 search-only latency [ms] (embed hariç)", get_val("search_only_p99", ""), fmt=".2f", higher_is_better=False))
+    print(format_row("QPS (wall-clock, search-only)", get_val("qps_search_only", ""), fmt=".2f", higher_is_better=True))
 
     print(format_row("Retrieval: peak RAM (RSS) [MB]", get_val("ret_mem", ""), fmt=".3f", higher_is_better=False))
     print(format_row("Retrieval: ort. CPU [%]", get_val("ret_cpu", ""), fmt=".2f", higher_is_better=False))
@@ -1360,6 +1894,13 @@ def main() -> None:
         default=3,
         help="Her DB için retrieval-pass'in kaç kez tekrarlanacağı (ortalama±std için). "
         "1 verilirse eski tek-geçiş davranışıyla aynı sonucu üretir.",
+    )
+    parser.add_argument(
+        "--warmup-query-count",
+        type=int,
+        default=WARMUP_COUNT,
+        help="Ölçümden önce çalıştırılacak (sonuçlara dahil edilmeyen) warm-up sorgu sayısı "
+        f"(varsayılan: {WARMUP_COUNT}).",
     )
     parser.add_argument(
         "--squad-version",
@@ -1496,6 +2037,7 @@ def main() -> None:
         query_seed=args.query_seed,
         dump_per_query=args.dump_per_query,
         include_faiss=args.include_faiss,
+        warmup_query_count=args.warmup_query_count,
     )
 
     _print_table(report)

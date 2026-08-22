@@ -3,6 +3,7 @@
 
 from src.evaluators.metrics import (
     mrr,
+    mrr_at_k,
     ndcg_at_k,
     precision_at_k,
     recall_at_k,
@@ -68,6 +69,30 @@ def test_ndcg_at_k_perfect_ranking():
     # nDCG_2 = 0.63 / 1.63
     non_perfect_retrieved = ["X", "B", "Y"]
     assert ndcg_at_k(non_perfect_retrieved, relevant, 2) < 1.0
+
+
+def test_mrr_at_k_truncates_beyond_k():
+    """A hit ranked beyond k does not count for mrr_at_k, unlike unbounded mrr."""
+    retrieved = ["A", "B", "C", "D"]
+    relevant = ["D"]
+
+    # D is at rank 4 -> unbounded mrr is 1/4
+    assert mrr(retrieved, relevant) == 0.25
+    # ...but mrr@3 truncates before D is seen -> 0.0
+    assert mrr_at_k(retrieved, relevant, 3) == 0.0
+    # mrr@4 includes rank 4 -> matches unbounded mrr here
+    assert mrr_at_k(retrieved, relevant, 4) == 0.25
+
+
+def test_mrr_at_k_within_k_matches_rank():
+    """A hit within the cutoff behaves exactly like unbounded mrr."""
+    retrieved = ["X", "B", "C"]
+    relevant = ["B"]
+
+    assert mrr_at_k(retrieved, relevant, 10) == 0.5
+    assert mrr_at_k(retrieved, relevant, 2) == 0.5
+    assert mrr_at_k([], relevant, 5) == 0.0
+    assert mrr_at_k(retrieved, relevant, 0) == 0.0
 
 
 def test_all_metrics_return_zero_for_empty_retrieved():

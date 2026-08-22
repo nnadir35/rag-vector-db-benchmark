@@ -8,7 +8,7 @@ outputs against known ground truth data.
 from ..core.evaluation import Evaluator
 from ..core.types import RetrievalResult
 from .config import RetrievalEvaluatorConfig
-from .metrics import mrr, ndcg_at_k, precision_at_k, recall_at_k
+from .metrics import mrr, mrr_at_k, ndcg_at_k, precision_at_k, recall_at_k
 
 
 class RetrievalEvaluator(Evaluator):
@@ -53,7 +53,8 @@ class RetrievalEvaluator(Evaluator):
 
         metrics: dict[str, float] = {}
 
-        # Calculate MRR (independent of K)
+        # Calculate MRR (independent of K). Kept as-is for backward compatibility;
+        # "mrr@{k}" below is the explicit, K-truncated variant.
         metrics["mrr"] = mrr(retrieved_ids, relevant_list)
 
         # Calculate K-dependent metrics
@@ -61,5 +62,6 @@ class RetrievalEvaluator(Evaluator):
             metrics[f"precision@{k}"] = precision_at_k(retrieved_ids, relevant_list, k)
             metrics[f"recall@{k}"] = recall_at_k(retrieved_ids, relevant_list, k)
             metrics[f"ndcg@{k}"] = ndcg_at_k(retrieved_ids, relevant_list, k)
+            metrics[f"mrr@{k}"] = mrr_at_k(retrieved_ids, relevant_list, k)
 
         return metrics
