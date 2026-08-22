@@ -1,0 +1,733 @@
+{
+  "analysis": "bootstrap_confidence_intervals",
+  "scope": {
+    "final_dbs": [
+      "qdrant",
+      "milvus",
+      "elasticsearch",
+      "weaviate"
+    ],
+    "excluded": [
+      "chroma",
+      "faiss"
+    ]
+  },
+  "methodology_note": "ChromaDB başlangıçtaki deney kapsamına dahil edilmiştir. Ancak kullanılan Docker/persistence konfigürasyonunda kalıcı depolama ölçümünün güvenilir olmadığı tespit edildiğinden, deneysel koşulların karşılaştırılabilirliğini korumak amacıyla ChromaDB final performans karşılaştırmasına dahil edilmemiştir. ChromaDB'ye ait ön deney sonuçları final istatistiksel analizlerde kullanılmamıştır.",
+  "bootstrap_config": {
+    "sample_unit": "query",
+    "n_bootstrap_samples": 10000,
+    "seed": 42,
+    "confidence_level": 0.95,
+    "note": "3 deterministic repeats are NOT used as independent samples; bootstrap resamples the 500 fixed queries."
+  },
+  "input_files": {
+    "S1": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S1_1000docs_5db_topk10_20260822_103413.json",
+    "S2": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S2_10000docs_5db_topk10_20260822_103632.json",
+    "S3": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S3_20000docs_5db_topk10_20260822_103954.json",
+    "S4": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S4_50000docs_5db_topk10_20260822_104734.json",
+    "S5": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S5_100000docs_5db_topk10_20260822_112215.json",
+    "S6": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S6_200000docs_5db_topk10_20260822_115137.json"
+  },
+  "housekeeping_check": [
+    {
+      "scale": "S1",
+      "filename": "official_scale_FINAL_4DB_S1_1000docs_5db_topk10_20260822_103413.json",
+      "filename_contains_5db": true,
+      "chroma_data_present_in_json": true,
+      "explanation": "Filename '_5db_' is NOT a naming bug in isolation — it reflects that the benchmark script (unmodified, per explicit decision to not touch Chroma's persistence code under time pressure) still executed and recorded Chroma internally alongside the 4 final DBs. The file's db_count comes from `db_count = 6 if args.include_faiss else 5` in scripts/benchmark_db.py's main(), which counts DBs *executed*, not the 'final 4 DB' analysis scope. This script and its outputs use the correct '4db' label and filter Chroma out of every statistic."
+    },
+    {
+      "scale": "S2",
+      "filename": "official_scale_FINAL_4DB_S2_10000docs_5db_topk10_20260822_103632.json",
+      "filename_contains_5db": true,
+      "chroma_data_present_in_json": true,
+      "explanation": "Filename '_5db_' is NOT a naming bug in isolation — it reflects that the benchmark script (unmodified, per explicit decision to not touch Chroma's persistence code under time pressure) still executed and recorded Chroma internally alongside the 4 final DBs. The file's db_count comes from `db_count = 6 if args.include_faiss else 5` in scripts/benchmark_db.py's main(), which counts DBs *executed*, not the 'final 4 DB' analysis scope. This script and its outputs use the correct '4db' label and filter Chroma out of every statistic."
+    },
+    {
+      "scale": "S3",
+      "filename": "official_scale_FINAL_4DB_S3_20000docs_5db_topk10_20260822_103954.json",
+      "filename_contains_5db": true,
+      "chroma_data_present_in_json": true,
+      "explanation": "Filename '_5db_' is NOT a naming bug in isolation — it reflects that the benchmark script (unmodified, per explicit decision to not touch Chroma's persistence code under time pressure) still executed and recorded Chroma internally alongside the 4 final DBs. The file's db_count comes from `db_count = 6 if args.include_faiss else 5` in scripts/benchmark_db.py's main(), which counts DBs *executed*, not the 'final 4 DB' analysis scope. This script and its outputs use the correct '4db' label and filter Chroma out of every statistic."
+    },
+    {
+      "scale": "S4",
+      "filename": "official_scale_FINAL_4DB_S4_50000docs_5db_topk10_20260822_104734.json",
+      "filename_contains_5db": true,
+      "chroma_data_present_in_json": true,
+      "explanation": "Filename '_5db_' is NOT a naming bug in isolation — it reflects that the benchmark script (unmodified, per explicit decision to not touch Chroma's persistence code under time pressure) still executed and recorded Chroma internally alongside the 4 final DBs. The file's db_count comes from `db_count = 6 if args.include_faiss else 5` in scripts/benchmark_db.py's main(), which counts DBs *executed*, not the 'final 4 DB' analysis scope. This script and its outputs use the correct '4db' label and filter Chroma out of every statistic."
+    },
+    {
+      "scale": "S5",
+      "filename": "official_scale_FINAL_4DB_S5_100000docs_5db_topk10_20260822_112215.json",
+      "filename_contains_5db": true,
+      "chroma_data_present_in_json": true,
+      "explanation": "Filename '_5db_' is NOT a naming bug in isolation — it reflects that the benchmark script (unmodified, per explicit decision to not touch Chroma's persistence code under time pressure) still executed and recorded Chroma internally alongside the 4 final DBs. The file's db_count comes from `db_count = 6 if args.include_faiss else 5` in scripts/benchmark_db.py's main(), which counts DBs *executed*, not the 'final 4 DB' analysis scope. This script and its outputs use the correct '4db' label and filter Chroma out of every statistic."
+    },
+    {
+      "scale": "S6",
+      "filename": "official_scale_FINAL_4DB_S6_200000docs_5db_topk10_20260822_115137.json",
+      "filename_contains_5db": true,
+      "chroma_data_present_in_json": true,
+      "explanation": "Filename '_5db_' is NOT a naming bug in isolation — it reflects that the benchmark script (unmodified, per explicit decision to not touch Chroma's persistence code under time pressure) still executed and recorded Chroma internally alongside the 4 final DBs. The file's db_count comes from `db_count = 6 if args.include_faiss else 5` in scripts/benchmark_db.py's main(), which counts DBs *executed*, not the 'final 4 DB' analysis scope. This script and its outputs use the correct '4db' label and filter Chroma out of every statistic."
+    }
+  ],
+  "query_hash_check": {
+    "per_scale_query_hash": {
+      "S1": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S2": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S3": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S4": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S5": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S6": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902"
+    },
+    "per_scale_config_hash": {
+      "S1": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S2": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S3": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S4": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S5": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S6": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59"
+    },
+    "query_hash_consistent_across_scales": true,
+    "config_hash_consistent_across_scales": true
+  },
+  "results_by_scale_and_db": {
+    "S1": {
+      "qdrant": {
+        "recall@10": {
+          "mean": 1.0,
+          "ci_low": 1.0,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9888666666666666,
+          "ci_low": 0.9813999999999999,
+          "ci_high": 0.9952000000000001,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9916730057097791,
+          "ci_low": 0.9860367138838436,
+          "ci_high": 0.9963637081740644,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "milvus": {
+        "recall@10": {
+          "mean": 1.0,
+          "ci_low": 1.0,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9888666666666666,
+          "ci_low": 0.9813999999999999,
+          "ci_high": 0.9952000000000001,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9916730057097791,
+          "ci_low": 0.9860367138838436,
+          "ci_high": 0.9963637081740644,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "elasticsearch": {
+        "recall@10": {
+          "mean": 1.0,
+          "ci_low": 1.0,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9888666666666666,
+          "ci_low": 0.9813999999999999,
+          "ci_high": 0.9952000000000001,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9916730057097791,
+          "ci_low": 0.9860367138838436,
+          "ci_high": 0.9963637081740644,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "weaviate": {
+        "recall@10": {
+          "mean": 1.0,
+          "ci_low": 1.0,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9888666666666666,
+          "ci_low": 0.9813999999999999,
+          "ci_high": 0.9952000000000001,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9916730057097791,
+          "ci_low": 0.9860367138838436,
+          "ci_high": 0.9963637081740644,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      }
+    },
+    "S2": {
+      "qdrant": {
+        "recall@10": {
+          "mean": 0.998,
+          "ci_low": 0.994,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.971,
+          "ci_low": 0.95875,
+          "ci_high": 0.9825,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9771757146718585,
+          "ci_low": 0.9676239611980179,
+          "ci_high": 0.9861539581490438,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "milvus": {
+        "recall@10": {
+          "mean": 0.968,
+          "ci_low": 0.952,
+          "ci_high": 0.982,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9427380952380952,
+          "ci_low": 0.9237833333333333,
+          "ci_high": 0.9606190476190476,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.948685040687459,
+          "ci_low": 0.9309806050440695,
+          "ci_high": 0.9651274587735995,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "elasticsearch": {
+        "recall@10": {
+          "mean": 0.998,
+          "ci_low": 0.994,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.971,
+          "ci_low": 0.95875,
+          "ci_high": 0.9825,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9771757146718585,
+          "ci_low": 0.9676239611980179,
+          "ci_high": 0.9861539581490438,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "weaviate": {
+        "recall@10": {
+          "mean": 0.994,
+          "ci_low": 0.986,
+          "ci_high": 1.0,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.968,
+          "ci_low": 0.9545833333333333,
+          "ci_high": 0.98041875,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9739138551647156,
+          "ci_low": 0.9628368095296246,
+          "ci_high": 0.9840852511596806,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      }
+    },
+    "S3": {
+      "qdrant": {
+        "recall@10": {
+          "mean": 0.99,
+          "ci_low": 0.98,
+          "ci_high": 0.998,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9473690476190476,
+          "ci_low": 0.9304872619047618,
+          "ci_high": 0.9633170833333332,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9563363745066815,
+          "ci_low": 0.9422800045055084,
+          "ci_high": 0.9694916330091248,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "milvus": {
+        "recall@10": {
+          "mean": 0.961,
+          "ci_low": 0.943,
+          "ci_high": 0.977,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9196047619047618,
+          "ci_low": 0.8974475,
+          "ci_high": 0.9402575000000001,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9281523409338909,
+          "ci_low": 0.907926904574872,
+          "ci_high": 0.9469192684193235,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "elasticsearch": {
+        "recall@10": {
+          "mean": 0.99,
+          "ci_low": 0.98,
+          "ci_high": 0.998,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9473690476190476,
+          "ci_low": 0.9304872619047618,
+          "ci_high": 0.9633170833333332,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9563363745066815,
+          "ci_low": 0.9422800045055084,
+          "ci_high": 0.9694916330091248,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "weaviate": {
+        "recall@10": {
+          "mean": 0.986,
+          "ci_low": 0.974,
+          "ci_high": 0.996,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9450047619047618,
+          "ci_low": 0.9273517857142858,
+          "ci_high": 0.961405119047619,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9535984058053075,
+          "ci_low": 0.9385905167863352,
+          "ci_high": 0.9674278480823079,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      }
+    },
+    "S4": {
+      "qdrant": {
+        "recall@10": {
+          "mean": 0.976,
+          "ci_low": 0.962,
+          "ci_high": 0.988,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9138793650793651,
+          "ci_low": 0.8923585515873016,
+          "ci_high": 0.9341575595238094,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9271897246579099,
+          "ci_low": 0.9084866730729348,
+          "ci_high": 0.9445577790613318,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "milvus": {
+        "recall@10": {
+          "mean": 0.949,
+          "ci_low": 0.929,
+          "ci_high": 0.967,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.889315873015873,
+          "ci_low": 0.8639469642857143,
+          "ci_high": 0.9127864087301586,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9018349972908987,
+          "ci_low": 0.8786462049179845,
+          "ci_high": 0.9233285688937364,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "elasticsearch": {
+        "recall@10": {
+          "mean": 0.972,
+          "ci_low": 0.956,
+          "ci_high": 0.986,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9098793650793651,
+          "ci_low": 0.8877779166666666,
+          "ci_high": 0.9305696031746031,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.9231897246579099,
+          "ci_low": 0.9037861956817987,
+          "ci_high": 0.941083039782189,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "weaviate": {
+        "recall@10": {
+          "mean": 0.97,
+          "ci_low": 0.954,
+          "ci_high": 0.984,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.9088793650793651,
+          "ci_low": 0.8864192063492063,
+          "ci_high": 0.9300296031746031,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.921927865150767,
+          "ci_low": 0.9021709449790747,
+          "ci_high": 0.9403270109401541,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      }
+    },
+    "S5": {
+      "qdrant": {
+        "recall@10": {
+          "mean": 0.9633333333333334,
+          "ci_low": 0.9466666666666667,
+          "ci_high": 0.9783333333333334,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8786174603174602,
+          "ci_low": 0.8538725595238095,
+          "ci_high": 0.9026221031746031,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8969838394022277,
+          "ci_low": 0.8754369229229279,
+          "ci_high": 0.9175151494181862,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "milvus": {
+        "recall@10": {
+          "mean": 0.9613333333333334,
+          "ci_low": 0.9443333333333332,
+          "ci_high": 0.977,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8772650793650794,
+          "ci_low": 0.8520616468253969,
+          "ci_high": 0.9015572023809524,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8954482796034492,
+          "ci_low": 0.8734090955056283,
+          "ci_high": 0.9162022425189219,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "elasticsearch": {
+        "recall@10": {
+          "mean": 0.9653333333333334,
+          "ci_low": 0.949,
+          "ci_high": 0.98,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8806174603174602,
+          "ci_low": 0.855744503968254,
+          "ci_high": 0.9044595436507937,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8989838394022277,
+          "ci_low": 0.8775798921881837,
+          "ci_high": 0.9192849592703305,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "weaviate": {
+        "recall@10": {
+          "mean": 0.9553333333333334,
+          "ci_low": 0.9369916666666668,
+          "ci_high": 0.972,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8726174603174602,
+          "ci_low": 0.8470397619047619,
+          "ci_high": 0.8975675,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8904601203879419,
+          "ci_low": 0.8675645842986276,
+          "ci_high": 0.9120952886943271,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      }
+    },
+    "S6": {
+      "qdrant": {
+        "recall@10": {
+          "mean": 0.9423333333333334,
+          "ci_low": 0.922,
+          "ci_high": 0.9616666666666667,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8191015873015873,
+          "ci_low": 0.7899576984126984,
+          "ci_high": 0.8477925793650795,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8458004077680376,
+          "ci_low": 0.8203845081008756,
+          "ci_high": 0.8704270229456285,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "milvus": {
+        "recall@10": {
+          "mean": 0.9443333333333334,
+          "ci_low": 0.9236666666666667,
+          "ci_high": 0.9630083333333331,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8254904761904762,
+          "ci_low": 0.7965979365079364,
+          "ci_high": 0.853634007936508,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.851017395628933,
+          "ci_low": 0.8257825854065718,
+          "ci_high": 0.8751352583007945,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "elasticsearch": {
+        "recall@10": {
+          "mean": 0.9463333333333334,
+          "ci_low": 0.9263333333333332,
+          "ci_high": 0.965,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8231015873015873,
+          "ci_low": 0.7942567261904762,
+          "ci_high": 0.8513569047619048,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8498004077680376,
+          "ci_low": 0.8245138723587905,
+          "ci_high": 0.8739058972892572,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      },
+      "weaviate": {
+        "recall@10": {
+          "mean": 0.9353333333333333,
+          "ci_low": 0.914,
+          "ci_high": 0.956,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "mrr@10": {
+          "mean": 0.8141015873015873,
+          "ci_low": 0.7846067063492064,
+          "ci_high": 0.8431517857142856,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        },
+        "ndcg@10": {
+          "mean": 0.8408514071502131,
+          "ci_low": 0.8148475004394865,
+          "ci_high": 0.8663042897899448,
+          "n_queries": 500,
+          "n_bootstrap_samples": 10000,
+          "seed": 42
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1434 @@
+{
+  "analysis": "paired_bootstrap_db_vs_db",
+  "scope": {
+    "final_dbs": [
+      "qdrant",
+      "milvus",
+      "elasticsearch",
+      "weaviate"
+    ],
+    "excluded": [
+      "chroma",
+      "faiss"
+    ]
+  },
+  "methodology_note": "ChromaDB başlangıçtaki deney kapsamına dahil edilmiştir. Ancak kullanılan Docker/persistence konfigürasyonunda kalıcı depolama ölçümünün güvenilir olmadığı tespit edildiğinden, deneysel koşulların karşılaştırılabilirliğini korumak amacıyla ChromaDB final performans karşılaştırmasına dahil edilmemiştir. ChromaDB'ye ait ön deney sonuçları final istatistiksel analizlerde kullanılmamıştır.",
+  "multiple_comparison_note": "Each scale x metric produces 6 pairwise comparisons (C(4,2) among 4 DBs), and there are 6 scales x 3 metrics = 18 such groups (108 paired comparisons total). No multiple-comparison correction (e.g. Bonferroni/Holm) has been applied to these CIs. Results are exploratory paired comparisons, not confirmatory hypothesis tests; treat any single 95% CI that excludes 0 accordingly, especially amid this many comparisons.",
+  "interpretation_note": "statistically_distinguishable_at_95pct=true means the paired-bootstrap 95% CI for the mean per-query delta excludes 0 — it does NOT mean 'DB A is definitively better than DB B' in any practical sense. Effect size (mean_delta) is reported alongside every comparison specifically so a statistically distinguishable but practically tiny difference (e.g. 0.001 recall) is not overstated.",
+  "bootstrap_config": {
+    "sample_unit": "query",
+    "n_bootstrap_samples": 10000,
+    "seed": 42,
+    "confidence_level": 0.95
+  },
+  "input_files": {
+    "S1": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S1_1000docs_5db_topk10_20260822_103413.json",
+    "S2": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S2_10000docs_5db_topk10_20260822_103632.json",
+    "S3": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S3_20000docs_5db_topk10_20260822_103954.json",
+    "S4": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S4_50000docs_5db_topk10_20260822_104734.json",
+    "S5": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S5_100000docs_5db_topk10_20260822_112215.json",
+    "S6": "/Users/mintmaint/projects/rag-vector-db-benchmark/scripts/../experiments/results/official_scale_FINAL_4DB_S6_200000docs_5db_topk10_20260822_115137.json"
+  },
+  "query_hash_check": {
+    "per_scale_query_hash": {
+      "S1": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S2": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S3": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S4": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S5": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "S6": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902"
+    },
+    "per_scale_config_hash": {
+      "S1": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S2": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S3": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S4": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S5": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "S6": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59"
+    },
+    "query_hash_consistent_across_scales": true,
+    "config_hash_consistent_across_scales": true
+  },
+  "results_by_scale_and_pair": {
+    "S1": {
+      "qdrant_vs_milvus": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_weaviate": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_weaviate": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "elasticsearch_vs_weaviate": {
+        "recall@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      }
+    },
+    "S2": {
+      "qdrant_vs_milvus": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.03,
+          "ci_low": 0.016,
+          "ci_high": 0.046,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.028261904761904762,
+          "ci_low": 0.01442857142857143,
+          "ci_high": 0.04392857142857143,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.02849067398439953,
+          "ci_low": 0.014686969319198363,
+          "ci_high": 0.04412068612141451,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_weaviate": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.003,
+          "ci_low": 0.0,
+          "ci_high": 0.008,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.003261859507142915,
+          "ci_low": 0.0,
+          "ci_high": 0.00852371901428583,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.03,
+          "ci_low": -0.046,
+          "ci_high": -0.016,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.028261904761904762,
+          "ci_low": -0.04392857142857143,
+          "ci_high": -0.01442857142857143,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.02849067398439953,
+          "ci_low": -0.04412068612141452,
+          "ci_high": -0.014686969319198363,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_weaviate": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.026,
+          "ci_low": -0.042,
+          "ci_high": -0.01,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.025261904761904763,
+          "ci_low": -0.04119047619047619,
+          "ci_high": -0.010797619047619047,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.025228814477256615,
+          "ci_low": -0.04121501617695907,
+          "ci_high": -0.010650684617656902,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "elasticsearch_vs_weaviate": {
+        "recall@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.003,
+          "ci_low": 0.0,
+          "ci_high": 0.008,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.003261859507142915,
+          "ci_low": 0.0,
+          "ci_high": 0.00852371901428583,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      }
+    },
+    "S3": {
+      "qdrant_vs_milvus": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.029,
+          "ci_low": 0.015,
+          "ci_high": 0.044,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.027764285714285714,
+          "ci_low": 0.013861130952380953,
+          "ci_high": 0.04369761904761905,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.028184033572790576,
+          "ci_low": 0.014705645806357923,
+          "ci_high": 0.043486138623629114,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_weaviate": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.002364285714285714,
+          "ci_low": -7.14285714285714e-05,
+          "ci_high": 0.0068000000000000005,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.0027379687013738743,
+          "ci_low": -7.14738261904182e-05,
+          "ci_high": 0.007868528072345416,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.029,
+          "ci_low": -0.044,
+          "ci_high": -0.015,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.027764285714285714,
+          "ci_low": -0.04369761904761905,
+          "ci_high": -0.013861130952380963,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.028184033572790576,
+          "ci_low": -0.043486138623629114,
+          "ci_high": -0.014705645806357944,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_weaviate": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.025,
+          "ci_low": -0.04,
+          "ci_high": -0.011,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.0254,
+          "ci_low": -0.04,
+          "ci_high": -0.012,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.025446064871416704,
+          "ci_low": -0.04021786399177281,
+          "ci_high": -0.012238124317949519,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "elasticsearch_vs_weaviate": {
+        "recall@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.002364285714285714,
+          "ci_low": -7.14285714285714e-05,
+          "ci_high": 0.0068000000000000005,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.0027379687013738743,
+          "ci_low": -7.14738261904182e-05,
+          "ci_high": 0.007868528072345416,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      }
+    },
+    "S4": {
+      "qdrant_vs_milvus": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.027,
+          "ci_low": 0.012,
+          "ci_high": 0.043,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.02456349206349206,
+          "ci_low": 0.010952380952380953,
+          "ci_high": 0.039730158730158734,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.02535472736701112,
+          "ci_low": 0.011902828494762705,
+          "ci_high": 0.040610868365855986,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.004,
+          "ci_low": 0.0,
+          "ci_high": 0.01,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_weaviate": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.006,
+          "ci_low": 0.0,
+          "ci_high": 0.014,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.005,
+          "ci_low": 0.0,
+          "ci_high": 0.012,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.005261859507142915,
+          "ci_low": 0.0,
+          "ci_high": 0.012,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.023,
+          "ci_low": -0.039,
+          "ci_high": -0.008,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.020563492063492065,
+          "ci_low": -0.03563571428571428,
+          "ci_high": -0.00673015873015873,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.02135472736701112,
+          "ci_low": -0.03633053836362243,
+          "ci_high": -0.007660983893136033,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_weaviate": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.021,
+          "ci_low": -0.037,
+          "ci_high": -0.006,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.019563492063492064,
+          "ci_low": -0.035277976190476186,
+          "ci_high": -0.00534900793650794,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": -0.020092867859868208,
+          "ci_low": -0.03550122564071481,
+          "ci_high": -0.006068555564861756,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "elasticsearch_vs_weaviate": {
+        "recall@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.002,
+          "ci_low": -0.006,
+          "ci_high": 0.012,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.001,
+          "ci_low": -0.007,
+          "ci_high": 0.009,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.001261859507142915,
+          "ci_low": -0.006738140492857084,
+          "ci_high": 0.009785578521428745,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      }
+    },
+    "S5": {
+      "qdrant_vs_milvus": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.002,
+          "ci_low": -0.006,
+          "ci_high": 0.012,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.0013523809523809523,
+          "ci_low": -0.004828571428571429,
+          "ci_high": 0.0077523809523809524,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": 0.0015355597987783327,
+          "ci_low": -0.005038588712311026,
+          "ci_high": 0.00842191260538978,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.002,
+          "ci_low": -0.006,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.002,
+          "ci_low": -0.006,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.002,
+          "ci_low": -0.006,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_weaviate": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.008,
+          "ci_low": 0.002,
+          "ci_high": 0.016,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.006,
+          "ci_low": 0.001,
+          "ci_high": 0.013,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.006523719014285831,
+          "ci_low": 0.001261859507142915,
+          "ci_high": 0.013785578521428747,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.004,
+          "ci_low": -0.012,
+          "ci_high": 0.004,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.0033523809523809526,
+          "ci_low": -0.00879047619047619,
+          "ci_high": 0.0006666666666666668,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.0035355597987783323,
+          "ci_low": -0.0094695249492059,
+          "ci_high": 0.0010474883392513814,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_weaviate": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.006,
+          "ci_low": -0.002,
+          "ci_high": 0.016,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.004647619047619047,
+          "ci_low": -0.003152380952380952,
+          "ci_high": 0.0128,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.004988159215507498,
+          "ci_low": -0.0027523606946202677,
+          "ci_high": 0.013250018722650412,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "elasticsearch_vs_weaviate": {
+        "recall@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.01,
+          "ci_low": 0.002,
+          "ci_high": 0.02,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.008,
+          "ci_low": 0.002,
+          "ci_high": 0.016,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.00852371901428583,
+          "ci_low": 0.002,
+          "ci_high": 0.01704743802857166,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      }
+    },
+    "S6": {
+      "qdrant_vs_milvus": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": -0.002,
+          "ci_low": -0.012,
+          "ci_high": 0.006,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": -0.006388888888888889,
+          "ci_low": -0.01388888888888889,
+          "ci_high": -0.00016666666666666674,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "milvus",
+          "mean_delta": -0.005216987860895346,
+          "ci_low": -0.012602059991327963,
+          "ci_high": 0.0011077783627261883,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.004,
+          "ci_low": -0.01,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.004,
+          "ci_low": -0.01,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.004,
+          "ci_low": -0.01,
+          "ci_high": 0.0,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "qdrant_vs_weaviate": {
+        "recall@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.007,
+          "ci_low": 0.001,
+          "ci_high": 0.015,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.005,
+          "ci_low": 0.00016666666666666674,
+          "ci_high": 0.011666666666666667,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "qdrant",
+          "db_b": "weaviate",
+          "mean_delta": 0.004949000617824488,
+          "ci_low": 0.0005840593484403583,
+          "ci_high": 0.011080651919384036,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_elasticsearch": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": -0.002,
+          "ci_low": -0.008,
+          "ci_high": 0.004,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.002388888888888889,
+          "ci_low": -0.0012777777777777776,
+          "ci_high": 0.00688888888888889,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "elasticsearch",
+          "mean_delta": 0.0012169878608953462,
+          "ci_low": -0.0027227062322935725,
+          "ci_high": 0.005282460959698057,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "milvus_vs_weaviate": {
+        "recall@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.009,
+          "ci_low": -0.002,
+          "ci_high": 0.021,
+          "ci_contains_zero": true,
+          "statistically_distinguishable_at_95pct": false,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.01138888888888889,
+          "ci_low": 0.002666666666666667,
+          "ci_high": 0.0215,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "milvus",
+          "db_b": "weaviate",
+          "mean_delta": 0.010165988478719835,
+          "ci_low": 0.0015391877021927898,
+          "ci_high": 0.01978135546025532,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      },
+      "elasticsearch_vs_weaviate": {
+        "recall@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.011,
+          "ci_low": 0.003,
+          "ci_high": 0.021,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "mrr@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.009,
+          "ci_low": 0.0019958333333333373,
+          "ci_high": 0.017833333333333336,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        },
+        "ndcg@10": {
+          "db_a": "elasticsearch",
+          "db_b": "weaviate",
+          "mean_delta": 0.008949000617824488,
+          "ci_low": 0.002,
+          "ci_high": 0.01740158938888632,
+          "ci_contains_zero": false,
+          "statistically_distinguishable_at_95pct": true,
+          "num_paired_queries": 500,
+          "dropped_only_in_a": [],
+          "dropped_only_in_b": []
+        }
+      }
+    }
+  }
+}

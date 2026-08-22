@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480" font-family="Helvetica,Arial,sans-serif">
+<rect x="0" y="0" width="720" height="480" fill="#ffffff"/>
+<text x="360.0" y="24" font-size="16" text-anchor="middle" fill="#1a1a1a" font-weight="600">100K Recall–Latency Pareto (query-time search-effort sweep)</text>
+<line x1="70" y1="420.0" x2="690" y2="420.0" stroke="#e5e5e5"/>
+<text x="62" y="424.0" font-size="10" text-anchor="end" fill="#555">0.927</text>
+<line x1="70" y1="344.0" x2="690" y2="344.0" stroke="#e5e5e5"/>
+<text x="62" y="348.0" font-size="10" text-anchor="end" fill="#555">0.936</text>
+<line x1="70" y1="268.0" x2="690" y2="268.0" stroke="#e5e5e5"/>
+<text x="62" y="272.0" font-size="10" text-anchor="end" fill="#555">0.945</text>
+<line x1="70" y1="192.0" x2="690" y2="192.0" stroke="#e5e5e5"/>
+<text x="62" y="196.0" font-size="10" text-anchor="end" fill="#555">0.953</text>
+<line x1="70" y1="116.0" x2="690" y2="116.0" stroke="#e5e5e5"/>
+<text x="62" y="120.0" font-size="10" text-anchor="end" fill="#555">0.962</text>
+<line x1="70" y1="40.0" x2="690" y2="40.0" stroke="#e5e5e5"/>
+<text x="62" y="44.0" font-size="10" text-anchor="end" fill="#555">0.970</text>
+<text x="380.0" y="464" font-size="11" text-anchor="middle" fill="#333">p50 latency, ms (log scale)</text>
+<text x="16" y="230.0" font-size="11" text-anchor="middle" fill="#333" transform="rotate(-90 16 230.0)">Qrels Recall@10</text>
+<line x1="70" y1="420" x2="690" y2="420" stroke="#999"/>
+<line x1="70" y1="40" x2="70" y2="420" stroke="#999"/>
+<path d="M 231.3,137.2 L 313.1,101.9 L 376.5,84.2 L 553.8,154.9 L 690.0,119.5" fill="none" stroke="#5B8FF9" stroke-width="1.5" stroke-dasharray="4,3"/>
+<circle cx="690.0" cy="119.5" r="4.5" fill="#5B8FF9"/>
+<circle cx="553.8" cy="154.9" r="4.5" fill="#5B8FF9"/>
+<circle cx="231.3" cy="137.2" r="4.5" fill="#5B8FF9"/>
+<circle cx="313.1" cy="101.9" r="4.5" fill="#5B8FF9"/>
+<circle cx="376.5" cy="84.2" r="4.5" fill="#5B8FF9"/>
+<path d="M 70.0,172.6 L 108.2,190.2 L 177.4,154.9 L 231.3,101.9 L 326.7,375.8" fill="none" stroke="#5AD8A6" stroke-width="1.5" stroke-dasharray="4,3"/>
+<circle cx="326.7" cy="375.8" r="4.5" fill="#5AD8A6"/>
+<circle cx="108.2" cy="190.2" r="4.5" fill="#5AD8A6"/>
+<circle cx="70.0" cy="172.6" r="4.5" fill="#5AD8A6"/>
+<circle cx="177.4" cy="154.9" r="4.5" fill="#5AD8A6"/>
+<circle cx="231.3" cy="101.9" r="4.5" fill="#5AD8A6"/>
+<path d="M 475.8,84.2 L 548.4,84.2 L 566.3,84.2 L 578.3,84.2 L 636.5,84.2" fill="none" stroke="#F6BD16" stroke-width="1.5" stroke-dasharray="4,3"/>
+<circle cx="578.3" cy="84.2" r="4.5" fill="#F6BD16"/>
+<circle cx="475.8" cy="84.2" r="4.5" fill="#F6BD16"/>
+<circle cx="548.4" cy="84.2" r="4.5" fill="#F6BD16"/>
+<circle cx="566.3" cy="84.2" r="4.5" fill="#F6BD16"/>
+<circle cx="636.5" cy="84.2" r="4.5" fill="#F6BD16"/>
+<path d="M 326.7,190.2" fill="none" stroke="#E86452" stroke-width="1.5" stroke-dasharray="4,3"/>
+<circle cx="326.7" cy="190.2" r="4.5" fill="#E86452"/>
+<rect x="80" y="40" width="10" height="10" fill="#5B8FF9"/>
+<text x="94" y="49" font-size="11" fill="#222">Qdrant (ef/num_candidates sweep)</text>
+<rect x="80" y="56" width="10" height="10" fill="#5AD8A6"/>
+<text x="94" y="65" font-size="11" fill="#222">Milvus (ef/num_candidates sweep)</text>
+<rect x="80" y="72" width="10" height="10" fill="#F6BD16"/>
+<text x="94" y="81" font-size="11" fill="#222">Elasticsearch (ef/num_candidates sweep)</text>
+<rect x="80" y="88" width="10" height="10" fill="#E86452"/>
+<text x="94" y="97" font-size="11" fill="#222">Weaviate (ef/num_candidates sweep)</text>
+</svg>

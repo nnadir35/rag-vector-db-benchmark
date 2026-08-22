@@ -1,0 +1,322 @@
+{
+  "generated_by": "scripts/build_thesis_inventory.py",
+  "note": "Read-only inventory over existing result files. No new experiments were run to produce this manifest.",
+  "final_thesis_db_scope": [
+    "qdrant",
+    "milvus",
+    "elasticsearch",
+    "weaviate"
+  ],
+  "excluded_dbs_from_final_comparison": [
+    "chroma",
+    "faiss"
+  ],
+  "included_experiments": [
+    {
+      "experiment_name": "FINAL_4DB_S1",
+      "file_path": "experiments/results/official_scale_FINAL_4DB_S1_1000docs_5db_topk10_20260822_103413.json",
+      "scale": "1K",
+      "num_documents": 1000,
+      "num_chunks": 1085,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "git_commit": "b8d0b788edba1a03fadfdf4aa01cc5ef174ef046",
+      "purpose": "Primary scale-point benchmark: indexing + retrieval quality/latency/resource metrics for 1K documents across the 4 final DBs (Chroma also executed internally, excluded from thesis metrics).",
+      "thesis_section": "4.x Scale Results — 1K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "FINAL_4DB_S2",
+      "file_path": "experiments/results/official_scale_FINAL_4DB_S2_10000docs_5db_topk10_20260822_103632.json",
+      "scale": "10K",
+      "num_documents": 10000,
+      "num_chunks": 10743,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "git_commit": "b8d0b788edba1a03fadfdf4aa01cc5ef174ef046",
+      "purpose": "Primary scale-point benchmark: indexing + retrieval quality/latency/resource metrics for 10K documents across the 4 final DBs (Chroma also executed internally, excluded from thesis metrics).",
+      "thesis_section": "4.x Scale Results — 10K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "FINAL_4DB_S3",
+      "file_path": "experiments/results/official_scale_FINAL_4DB_S3_20000docs_5db_topk10_20260822_103954.json",
+      "scale": "20K",
+      "num_documents": 20000,
+      "num_chunks": 21646,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "git_commit": "b8d0b788edba1a03fadfdf4aa01cc5ef174ef046",
+      "purpose": "Primary scale-point benchmark: indexing + retrieval quality/latency/resource metrics for 20K documents across the 4 final DBs (Chroma also executed internally, excluded from thesis metrics).",
+      "thesis_section": "4.x Scale Results — 20K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "FINAL_4DB_S4",
+      "file_path": "experiments/results/official_scale_FINAL_4DB_S4_50000docs_5db_topk10_20260822_104734.json",
+      "scale": "50K",
+      "num_documents": 50000,
+      "num_chunks": 54410,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "git_commit": "b8d0b788edba1a03fadfdf4aa01cc5ef174ef046",
+      "purpose": "Primary scale-point benchmark: indexing + retrieval quality/latency/resource metrics for 50K documents across the 4 final DBs (Chroma also executed internally, excluded from thesis metrics).",
+      "thesis_section": "4.x Scale Results — 50K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "FINAL_4DB_S5",
+      "file_path": "experiments/results/official_scale_FINAL_4DB_S5_100000docs_5db_topk10_20260822_112215.json",
+      "scale": "100K",
+      "num_documents": 100000,
+      "num_chunks": 108903,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "git_commit": "b8d0b788edba1a03fadfdf4aa01cc5ef174ef046",
+      "purpose": "Primary scale-point benchmark: indexing + retrieval quality/latency/resource metrics for 100K documents across the 4 final DBs (Chroma also executed internally, excluded from thesis metrics).",
+      "thesis_section": "4.x Scale Results — 100K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "FINAL_4DB_S6",
+      "file_path": "experiments/results/official_scale_FINAL_4DB_S6_200000docs_5db_topk10_20260822_115137.json",
+      "scale": "200K",
+      "num_documents": 200000,
+      "num_chunks": 221582,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": "84165b7b37d6f933ef8689059b572b9b207daba5eb680dea2587aaaec3de6e59",
+      "git_commit": "b8d0b788edba1a03fadfdf4aa01cc5ef174ef046",
+      "purpose": "Primary scale-point benchmark: indexing + retrieval quality/latency/resource metrics for 200K documents across the 4 final DBs (Chroma also executed internally, excluded from thesis metrics).",
+      "thesis_section": "4.x Scale Results — 200K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "analysis_FINAL_4DB_bootstrap_ci",
+      "file_path": "experiments/results/analysis_FINAL_4DB_bootstrap_ci.json",
+      "scale": "S1-S6 (1K-200K)",
+      "num_documents": null,
+      "num_chunks": null,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": null,
+      "config_hash": null,
+      "git_commit": null,
+      "purpose": "Per-DB, per-scale bootstrap 95% CI (10,000 resamples, seed 42) on Recall@10/MRR@10/nDCG@10 over the 500 fixed queries.",
+      "thesis_section": "4.y Statistical Confidence (per-DB bootstrap CI)",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "analysis_FINAL_4DB_paired_bootstrap",
+      "file_path": "experiments/results/analysis_FINAL_4DB_paired_bootstrap.json",
+      "scale": "S1-S6 (1K-200K)",
+      "num_documents": null,
+      "num_chunks": null,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": null,
+      "config_hash": null,
+      "git_commit": null,
+      "purpose": "Paired-bootstrap mean-delta 95% CI for every DB-pair x scale x metric (exploratory, no multiple-comparison correction).",
+      "thesis_section": "4.z Pairwise DB Comparisons (paired bootstrap)",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "analysis_FINAL_4DB_exact_vs_ann_100K",
+      "file_path": "experiments/results/analysis_FINAL_4DB_exact_vs_ann_100K.json",
+      "scale": "100K",
+      "num_documents": 100000,
+      "num_chunks": 108903,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": null,
+      "config_hash": null,
+      "git_commit": null,
+      "purpose": "ANN-vs-exact (faiss.IndexFlatIP brute force) agreement@10 for each DB, single index build, point estimate (not repeated-build).",
+      "thesis_section": "4.w ANN Fidelity vs Exact Search — 100K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "analysis_FINAL_4DB_exact_vs_ann_200K",
+      "file_path": "experiments/results/analysis_FINAL_4DB_exact_vs_ann_200K.json",
+      "scale": "200K",
+      "num_documents": 200000,
+      "num_chunks": 221582,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate"
+      ],
+      "query_count": 500,
+      "query_hash": null,
+      "config_hash": null,
+      "git_commit": null,
+      "purpose": "ANN-vs-exact (faiss.IndexFlatIP brute force) agreement@10 for each DB, single index build, point estimate (not repeated-build).",
+      "thesis_section": "4.w ANN Fidelity vs Exact Search — 200K",
+      "excluded_from_thesis": false
+    },
+    {
+      "experiment_name": "analysis_FINAL_4DB_ann_pareto_100K",
+      "file_path": "experiments/results/analysis_FINAL_4DB_ann_pareto_100K.json",
+      "scale": "100K",
+      "num_documents": 100000,
+      "num_chunks": 108903,
+      "db_list": [
+        "qdrant",
+        "milvus",
+        "elasticsearch",
+        "weaviate (reference point only)"
+      ],
+      "query_count": 500,
+      "query_hash": "3d2b273eaa2b0dd7bc006c26cc8c279f8bc840f4a7dcb77400b8f743e2937902",
+      "config_hash": null,
+      "git_commit": null,
+      "purpose": "Query-time ANN search-effort sweep (ef / num_candidates in [16,32,64,128,256]) on ONE build per DB, isolating the recall-latency trade-off from build-to-build variance. Weaviate excluded from the sweep (ef is build-time-only in this client) and reported as one reference point.",
+      "thesis_section": "4.v Recall–Latency Pareto Sweep — 100K",
+      "excluded_from_thesis": false
+    }
+  ],
+  "excluded_from_thesis": [
+    {
+      "experiment_name": "official_scale_experiment_A_S1_1000docs_5db_topk10_20260803_123156",
+      "file_path": "experiments/results/official_scale_experiment_A_S1_1000docs_5db_topk10_20260803_123156.json",
+      "excluded_from_thesis": true,
+      "reason": "pre-FINAL_4DB pilot run (experiment_A series), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_experiment_A_S2_10000docs_5db_topk10_20260803_123807",
+      "file_path": "experiments/results/official_scale_experiment_A_S2_10000docs_5db_topk10_20260803_123807.json",
+      "excluded_from_thesis": true,
+      "reason": "pre-FINAL_4DB pilot run (experiment_A series), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_experiment_A_S3_20000docs_5db_topk10_20260805_151408",
+      "file_path": "experiments/results/official_scale_experiment_A_S3_20000docs_5db_topk10_20260805_151408.json",
+      "excluded_from_thesis": true,
+      "reason": "pre-FINAL_4DB pilot run (experiment_A series), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_experiment_A_S4_50000docs_5db_topk10_20260814_154710",
+      "file_path": "experiments/results/official_scale_experiment_A_S4_50000docs_5db_topk10_20260814_154710.json",
+      "excluded_from_thesis": true,
+      "reason": "pre-FINAL_4DB pilot run (experiment_A series), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_S5_100000docs_5db_topk10_100000docs_5db_topk10_20260820_152847",
+      "file_path": "experiments/results/official_scale_S5_100000docs_5db_topk10_100000docs_5db_topk10_20260820_152847.json",
+      "excluded_from_thesis": true,
+      "reason": "pre-FINAL_4DB S5 run, superseded by FINAL_4DB S5"
+    },
+    {
+      "experiment_name": "official_scale_S6_200000docs_5db_topk10_200000docs_5db_topk10_20260820_163053",
+      "file_path": "experiments/results/official_scale_S6_200000docs_5db_topk10_200000docs_5db_topk10_20260820_163053.json",
+      "excluded_from_thesis": true,
+      "reason": "pre-FINAL_4DB S6 run, superseded by FINAL_4DB S6"
+    },
+    {
+      "experiment_name": "official_scale_FINAL_V3_S1_1000docs_5db_topk10_20260822_083807",
+      "file_path": "experiments/results/official_scale_FINAL_V3_S1_1000docs_5db_topk10_20260822_083807.json",
+      "excluded_from_thesis": true,
+      "reason": "intermediate FINAL_V3 series (pre-metrics-upgrade), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_FINAL_V3_S2_10000docs_5db_topk10_20260822_084023",
+      "file_path": "experiments/results/official_scale_FINAL_V3_S2_10000docs_5db_topk10_20260822_084023.json",
+      "excluded_from_thesis": true,
+      "reason": "intermediate FINAL_V3 series (pre-metrics-upgrade), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_FINAL_V3_S3_20000docs_5db_topk10_20260822_084345",
+      "file_path": "experiments/results/official_scale_FINAL_V3_S3_20000docs_5db_topk10_20260822_084345.json",
+      "excluded_from_thesis": true,
+      "reason": "intermediate FINAL_V3 series (pre-metrics-upgrade), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_FINAL_V3_S4_50000docs_5db_topk10_20260822_085010",
+      "file_path": "experiments/results/official_scale_FINAL_V3_S4_50000docs_5db_topk10_20260822_085010.json",
+      "excluded_from_thesis": true,
+      "reason": "intermediate FINAL_V3 series (pre-metrics-upgrade), superseded by FINAL_4DB"
+    },
+    {
+      "experiment_name": "official_scale_SMOKE_metrics_upgrade_1K_1000docs_5db_topk10_20260822_081203",
+      "file_path": "experiments/results/official_scale_SMOKE_metrics_upgrade_1K_1000docs_5db_topk10_20260822_081203.json",
+      "excluded_from_thesis": true,
+      "reason": "smoke test of MRR/nDCG metrics upgrade, not a scientific run"
+    },
+    {
+      "experiment_name": "official_scale_SMOKE_metrics_upgrade_1K_v2_1000docs_5db_topk10_20260822_083413",
+      "file_path": "experiments/results/official_scale_SMOKE_metrics_upgrade_1K_v2_1000docs_5db_topk10_20260822_083413.json",
+      "excluded_from_thesis": true,
+      "reason": "smoke test of MRR/nDCG metrics upgrade (v2), not a scientific run"
+    },
+    {
+      "experiment_name": "validation_report_s3_chroma_disk_20260822_073001",
+      "file_path": "experiments/results/validation_report_s3_chroma_disk_20260822_073001.json",
+      "excluded_from_thesis": true,
+      "reason": "one-off validation report for Chroma S3 disk-usage measurement bug, not a benchmark result"
+    },
+    {
+      "experiment_name": "fixed_queries_20260803_123156",
+      "file_path": "experiments/results/fixed_queries_20260803_123156.json",
+      "excluded_from_thesis": true,
+      "reason": "early fixed-query-set artifact from the experiment_A pilot series"
+    }
+  ]
+}
